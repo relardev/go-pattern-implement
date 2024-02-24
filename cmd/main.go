@@ -103,9 +103,9 @@ func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 			Results: &ast.FieldList{
 				List: []*ast.Field{
 					{
-						Type: ast.NewIdent(
-							interfaceName,
-						),
+						Type: &ast.StarExpr{
+							X: ast.NewIdent(interfaceName),
+						},
 					},
 				},
 			},
@@ -156,6 +156,28 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 
 	typeDef.Results.List = append(typeDef.Results.List, field.Type.(*ast.FuncType).Results.List...)
 
+	callStmt := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			ast.NewIdent("result"),
+			ast.NewIdent("err"),
+		},
+		Tok: token.DEFINE,
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X:   ast.NewIdent(fmt.Sprintf("%s.%s", firstLetter, firstLetter)),
+					Sel: ast.NewIdent(funcName),
+				},
+				Args: callArgs,
+			},
+		},
+	}
+
+	returnExpr := []ast.Expr{
+		ast.NewIdent("result"),
+		ast.NewIdent("err"),
+	}
+
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
@@ -169,19 +191,74 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 		},
 		Name: ast.NewIdent(funcName),
 		Type: typeDef,
-		Body: &ast.BlockStmt{
-			List: []ast.Stmt{
-				&ast.ReturnStmt{
-					Results: []ast.Expr{
-						&ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   ast.NewIdent(fmt.Sprintf("%s.%s", firstLetter, firstLetter)),
-								Sel: ast.NewIdent(funcName),
-							},
-							Args: callArgs,
+		// TODO generate prefix
+		Body: measuredBody(callStmt, returnExpr, "something_doSomething"),
+	}
+}
+
+func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string) *ast.BlockStmt {
+	return &ast.BlockStmt{
+		List: []ast.Stmt{
+			&ast.ExprStmt{
+				X: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("prometheus"),
+						Sel: ast.NewIdent("Increment"),
+					},
+					Args: []ast.Expr{
+						&ast.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`%q`, measurePrefix),
 						},
 					},
 				},
+			},
+			&ast.DeferStmt{
+				Call: &ast.CallExpr{
+					Fun: &ast.SelectorExpr{
+						X:   ast.NewIdent("prometheus"),
+						Sel: ast.NewIdent("ObserveDuration"),
+					},
+					Args: []ast.Expr{
+						&ast.BasicLit{
+							Kind:  token.STRING,
+							Value: fmt.Sprintf(`"%s_seconds"`, measurePrefix),
+						},
+						&ast.CallExpr{
+							Fun: ast.NewIdent("time.Now"),
+						},
+					},
+				},
+			},
+
+			callStmt,
+			&ast.IfStmt{
+				Cond: &ast.BinaryExpr{
+					X:  ast.NewIdent("err"),
+					Op: token.NEQ,
+					Y:  ast.NewIdent("nil"),
+				},
+				Body: &ast.BlockStmt{
+					List: []ast.Stmt{
+						&ast.ExprStmt{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X:   ast.NewIdent("prometheus"),
+									Sel: ast.NewIdent("Increment"),
+								},
+								Args: []ast.Expr{
+									&ast.BasicLit{
+										Kind:  token.STRING,
+										Value: fmt.Sprintf(`%q`, measurePrefix+"_error"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			&ast.ReturnStmt{
+				Results: returnExpr,
 			},
 		},
 	}
