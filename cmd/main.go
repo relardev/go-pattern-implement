@@ -181,9 +181,12 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 
 		if len(param.Names) == 0 {
 			param.Names = []*ast.Ident{ast.NewIdent(name)}
+			callArgs = append(callArgs, ast.NewIdent(name))
+		} else {
+			for _, name := range param.Names {
+				callArgs = append(callArgs, ast.NewIdent(name.Name))
+			}
 		}
-
-		callArgs = append(callArgs, ast.NewIdent(param.Names[0].Name))
 
 		typeDef.Params.List = append(typeDef.Params.List, param)
 	}
