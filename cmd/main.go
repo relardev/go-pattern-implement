@@ -7,14 +7,19 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
+	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const mainTemplate = `
 package xxx
 
-type Something interface {
-	DoSomething(string) error
+type Repo interface {
+	Find(id int) (domain.User, error)
+	FindAll() ([]domain.User, error)
+	Save(domain.User) error
+	ApplyToAll(func(domain.User) error)
 }
 
 `
@@ -154,29 +159,72 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 		typeDef.Params.List = append(typeDef.Params.List, param)
 	}
 
-	typeDef.Results.List = append(typeDef.Results.List, field.Type.(*ast.FuncType).Results.List...)
+	if field.Type != nil {
+		switch n := field.Type.(type) {
+		case *ast.FuncType:
+			if n.Results != nil {
+				typeDef.Results.List = append(typeDef.Results.List, n.Results.List...)
+			}
+		default:
+			fmt.Printf("Unknown type: %T\n", n)
+			panic("Unknown type")
+		}
+	}
 
-	callStmt := &ast.AssignStmt{
-		Lhs: []ast.Expr{
+	var returningError bool
+
+	if typeDef.Results.NumFields() > 0 {
+		for _, result := range typeDef.Results.List {
+			switch n := result.Type.(type) {
+			case *ast.Ident:
+				if n.Name == "error" {
+					returningError = true
+				}
+			default:
+				fmt.Printf("Unknown type: %T\n", n)
+			}
+		}
+	}
+
+	callWrapped := &ast.CallExpr{
+		Fun: &ast.SelectorExpr{
+			X:   ast.NewIdent(fmt.Sprintf("%s.%s", firstLetter, firstLetter)),
+			Sel: ast.NewIdent(funcName),
+		},
+		Args: callArgs,
+	}
+
+	var callStmt ast.Stmt
+	var returnExpr []ast.Expr
+
+	if returningError {
+		callStmt = &ast.AssignStmt{
+			Lhs: []ast.Expr{
+				ast.NewIdent("result"),
+				ast.NewIdent("err"),
+			},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				callWrapped,
+			},
+		}
+
+		returnExpr = []ast.Expr{
 			ast.NewIdent("result"),
 			ast.NewIdent("err"),
-		},
-		Tok: token.DEFINE,
-		Rhs: []ast.Expr{
-			&ast.CallExpr{
-				Fun: &ast.SelectorExpr{
-					X:   ast.NewIdent(fmt.Sprintf("%s.%s", firstLetter, firstLetter)),
-					Sel: ast.NewIdent(funcName),
-				},
-				Args: callArgs,
-			},
-		},
+		}
+
+	} else {
+		returnExpr = []ast.Expr{
+			callWrapped,
+		}
 	}
 
-	returnExpr := []ast.Expr{
-		ast.NewIdent("result"),
-		ast.NewIdent("err"),
-	}
+	measurePrefix := fmt.Sprintf(
+		"%s_%s",
+		lowercaseFirstLetter(interfaceName),
+		lowercaseFirstLetter(funcName),
+	)
 
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
@@ -191,13 +239,12 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 		},
 		Name: ast.NewIdent(funcName),
 		Type: typeDef,
-		// TODO generate prefix
-		Body: measuredBody(callStmt, returnExpr, "something_doSomething"),
+		Body: measuredBody(callStmt, returnExpr, measurePrefix),
 	}
 }
 
 func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string) *ast.BlockStmt {
-	return &ast.BlockStmt{
+	blockStmt := &ast.BlockStmt{
 		List: []ast.Stmt{
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
@@ -230,36 +277,54 @@ func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string
 					},
 				},
 			},
+		},
+	}
 
-			callStmt,
-			&ast.IfStmt{
-				Cond: &ast.BinaryExpr{
-					X:  ast.NewIdent("err"),
-					Op: token.NEQ,
-					Y:  ast.NewIdent("nil"),
-				},
-				Body: &ast.BlockStmt{
-					List: []ast.Stmt{
-						&ast.ExprStmt{
-							X: &ast.CallExpr{
-								Fun: &ast.SelectorExpr{
-									X:   ast.NewIdent("prometheus"),
-									Sel: ast.NewIdent("Increment"),
-								},
-								Args: []ast.Expr{
-									&ast.BasicLit{
-										Kind:  token.STRING,
-										Value: fmt.Sprintf(`%q`, measurePrefix+"_error"),
-									},
-								},
+	reportErr := &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("prometheus"),
+							Sel: ast.NewIdent("Increment"),
+						},
+						Args: []ast.Expr{
+							&ast.BasicLit{
+								Kind:  token.STRING,
+								Value: fmt.Sprintf(`%q`, measurePrefix+"_error"),
 							},
 						},
 					},
 				},
 			},
-			&ast.ReturnStmt{
-				Results: returnExpr,
-			},
 		},
 	}
+
+	returnStmt := &ast.ReturnStmt{
+		Results: returnExpr,
+	}
+
+	if callStmt != nil {
+		blockStmt.List = append(blockStmt.List, callStmt)
+		blockStmt.List = append(blockStmt.List, reportErr)
+	}
+	blockStmt.List = append(blockStmt.List, returnStmt)
+
+	return blockStmt
+}
+
+func lowercaseFirstLetter(s string) string {
+	if s == "" {
+		return ""
+	}
+	// Get the first rune
+	r, size := utf8.DecodeRuneInString(s)
+	// Lowercase the first rune and concatenate with the rest of the string
+	return strings.ToLower(string(r)) + s[size:]
 }
