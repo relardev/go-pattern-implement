@@ -17,6 +17,8 @@ package xxx
 
 type Repo interface {
 	Find(id int) (domain.User, error)
+	FindBy(id1, id2 int) (domain.User, error)
+	FindByInt(int, int) (domain.User, error)
 	FindAll() ([]domain.User, error)
 	Save(domain.User) error
 	ApplyToAll(func(domain.User) error)
@@ -141,6 +143,7 @@ func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 	firstLetter := string(unicode.ToLower(rune(interfaceName[0])))
 	funcName := field.Names[0].Name
+	fmt.Printf("\nImplementing %s\n", funcName)
 
 	typeDef := &ast.FuncType{
 		Params:  &ast.FieldList{},
@@ -148,10 +151,36 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 	}
 
 	callArgs := []ast.Expr{}
+	usedNames := map[string]int{}
 
-	for i, param := range field.Type.(*ast.FuncType).Params.List {
+	for _, param := range field.Type.(*ast.FuncType).Params.List {
+		var name string
+		switch n := param.Type.(type) {
+		case *ast.Ident:
+			name = "arg"
+		case *ast.StarExpr:
+			name = "arg"
+		case *ast.SelectorExpr:
+			name = nameFromSelector(n)
+		case *ast.ArrayType:
+			name = "arg"
+		case *ast.MapType:
+			name = "arg"
+		case *ast.FuncType:
+			name = "fn"
+		default:
+			name = "arg"
+		}
+
+		if _, ok := usedNames[name]; ok {
+			usedNames[name]++
+			name = fmt.Sprintf("%s%d", name, usedNames[name])
+		} else {
+			usedNames[name] = 1
+		}
+
 		if len(param.Names) == 0 {
-			param.Names = []*ast.Ident{ast.NewIdent("arg" + fmt.Sprint(i))}
+			param.Names = []*ast.Ident{ast.NewIdent(name)}
 		}
 
 		callArgs = append(callArgs, ast.NewIdent(param.Names[0].Name))
@@ -181,7 +210,7 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 					returningError = true
 				}
 			default:
-				fmt.Printf("Unknown type: %T\n", n)
+				fmt.Printf("Unknown type in results: %T\n", n)
 			}
 		}
 	}
@@ -327,4 +356,8 @@ func lowercaseFirstLetter(s string) string {
 	r, size := utf8.DecodeRuneInString(s)
 	// Lowercase the first rune and concatenate with the rest of the string
 	return strings.ToLower(string(r)) + s[size:]
+}
+
+func nameFromSelector(sel *ast.SelectorExpr) string {
+	return lowercaseFirstLetter(sel.Sel.Name)
 }
