@@ -2,7 +2,6 @@ package implement
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -22,14 +21,6 @@ package whatever
 `
 
 func Implement(implementation, packageName string) {
-	flag.Parse()
-	args := flag.Args()
-
-	if len(args) < 1 {
-		fmt.Println("No positional argument provided")
-		os.Exit(1)
-	}
-
 	text := getTextFromStdin()
 
 	filledTemplate := strings.Replace(mainTemplate, "{{TEXT}}", text, 1)
