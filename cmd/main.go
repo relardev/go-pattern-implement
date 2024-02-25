@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"component-generator/internal/implementations/prometheus"
+	slogImp "component-generator/internal/implementations/slog"
 )
 
 const mainTemplate = `
@@ -49,6 +50,8 @@ func main() {
 	switch implementation {
 	case "prometheus":
 		visitor = prometheus.Visitor(*packageName, fset)
+	case "slog":
+		visitor = slogImp.Visitor(*packageName, fset)
 	default:
 		fmt.Println("Unknown implementation", implementation)
 		os.Exit(1)
