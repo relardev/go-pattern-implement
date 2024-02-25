@@ -1,6 +1,11 @@
 package list
 
+import "strings"
+
 func List() string {
-	return `prometheus
-`
+	options := []string{
+		"prometheus",
+		"slog",
+	}
+	return strings.Join(options, "\n")
 }
