@@ -1,4 +1,4 @@
-package main
+package implement
 
 import (
 	"bufio"
@@ -21,9 +21,7 @@ package whatever
 
 `
 
-func main() {
-	packageName := flag.String("package", "xxx", "package from which inteface comes from")
-
+func Implement(implementation, packageName string) {
 	flag.Parse()
 	args := flag.Args()
 
@@ -31,8 +29,6 @@ func main() {
 		fmt.Println("No positional argument provided")
 		os.Exit(1)
 	}
-
-	implementation := args[0]
 
 	text := getTextFromStdin()
 
@@ -48,9 +44,9 @@ func main() {
 
 	switch implementation {
 	case "prometheus":
-		visitor = prometheus.Visitor(*packageName, fset)
+		visitor = prometheus.Visitor(packageName, fset)
 	case "slog":
-		visitor = slogImp.Visitor(*packageName, fset)
+		visitor = slogImp.Visitor(packageName, fset)
 	default:
 		fmt.Println("Unknown implementation", implementation)
 		os.Exit(1)
