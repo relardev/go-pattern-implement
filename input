@@ -1,0 +1,1 @@
+type xxx func(context.Context, string) (*User, error)

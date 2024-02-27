@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	filegetter "component-generator/internal/implementations/file_getter"
 	"component-generator/internal/implementations/prometheus"
 	slogImp "component-generator/internal/implementations/slog"
 )
@@ -38,6 +39,8 @@ func Implement(implementation, packageName string) {
 		visitor = prometheus.Visitor(packageName, fset)
 	case "slog":
 		visitor = slogImp.Visitor(packageName, fset)
+	case "filegetter":
+		visitor = filegetter.Visitor(packageName, fset)
 	default:
 		fmt.Println("Unknown implementation", implementation)
 		os.Exit(1)
