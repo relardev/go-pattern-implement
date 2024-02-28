@@ -44,6 +44,7 @@ func Visitor(packageName string, fset *token.FileSet) func(node ast.Node) bool {
 
 func structFromInterface(interfaceName, interfacePackage string) ast.Decl {
 	firstLetter := unicode.ToLower(rune(interfaceName[0]))
+
 	return &ast.GenDecl{
 		Tok: token.TYPE,
 		Specs: []ast.Spec{
@@ -68,6 +69,7 @@ func structFromInterface(interfaceName, interfacePackage string) ast.Decl {
 
 func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 	firstLetter := unicode.ToLower(rune(interfaceName[0]))
+
 	return &ast.FuncDecl{
 		Name: ast.NewIdent("New" + interfaceName),
 		Type: &ast.FuncType{
@@ -176,18 +178,7 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 		}
 	}
 
-	var returningError bool
-
-	if typeDef.Results.NumFields() > 0 {
-		for _, result := range typeDef.Results.List {
-			switch n := result.Type.(type) {
-			case *ast.Ident:
-				if n.Name == "error" {
-					returningError = true
-				}
-			}
-		}
-	}
+	returns, returningError := processReturns(typeDef)
 
 	callWrapped := &ast.CallExpr{
 		Fun: &ast.SelectorExpr{
@@ -198,25 +189,19 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 	}
 
 	var callStmt ast.Stmt
+
 	var returnExpr []ast.Expr
 
 	if returningError {
+		returnExpr = returns
+
 		callStmt = &ast.AssignStmt{
-			Lhs: []ast.Expr{
-				ast.NewIdent("result"),
-				ast.NewIdent("err"),
-			},
+			Lhs: returnExpr,
 			Tok: token.DEFINE,
 			Rhs: []ast.Expr{
 				callWrapped,
 			},
 		}
-
-		returnExpr = []ast.Expr{
-			ast.NewIdent("result"),
-			ast.NewIdent("err"),
-		}
-
 	} else {
 		returnExpr = []ast.Expr{
 			callWrapped,
@@ -317,6 +302,7 @@ func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string
 		blockStmt.List = append(blockStmt.List, callStmt)
 		blockStmt.List = append(blockStmt.List, reportErr)
 	}
+
 	blockStmt.List = append(blockStmt.List, returnStmt)
 
 	return blockStmt
@@ -334,4 +320,50 @@ func lowercaseFirstLetter(s string) string {
 
 func nameFromSelector(sel *ast.SelectorExpr) string {
 	return lowercaseFirstLetter(sel.Sel.Name)
+}
+
+func processReturns(typeDef *ast.FuncType) ([]ast.Expr, bool) {
+	resultsList := typeDef.Results.List
+	var returningError bool
+
+	var returns []ast.Expr
+	for _, result := range resultsList {
+		switch n := result.Type.(type) {
+		case *ast.Ident:
+			if n.Name == "error" {
+				returningError = true
+			}
+		}
+	}
+
+	var namedReturns int
+
+	if returningError {
+		namedReturns = len(resultsList) - 1
+	} else {
+		namedReturns = len(resultsList)
+	}
+
+	for n, result := range resultsList {
+		isError := false
+
+		switch n := result.Type.(type) {
+		case *ast.Ident:
+			if n.Name == "error" {
+				isError = true
+			}
+		}
+
+		if isError {
+			returns = append(returns, ast.NewIdent("err"))
+		} else {
+			if namedReturns > 1 {
+				returns = append(returns, ast.NewIdent(fmt.Sprintf("result%v", n+1)))
+			} else {
+				returns = append(returns, ast.NewIdent("result"))
+			}
+		}
+	}
+
+	return returns, returningError
 }
