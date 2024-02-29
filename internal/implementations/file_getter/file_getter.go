@@ -56,15 +56,42 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 
 	var zeroValue ast.Expr
 
+	var unmarshalArg ast.Expr
+
 	switch t := returnType.(type) {
 	case *ast.StarExpr:
 		zeroValue = ast.NewIdent("nil")
+		unmarshalArg = varIdent
 	case *ast.SelectorExpr:
 		zeroValue = &ast.CompositeLit{
 			Type: t,
 		}
+
+		unmarshalArg = &ast.UnaryExpr{
+			Op: token.AND,
+			X:  varIdent,
+		}
 	default:
 		return nil, errors.New("unsupported return type")
+	}
+
+	ignoredField := []*ast.Field{}
+
+	for _, f := range fn.Params.List {
+		idents := []*ast.Ident{}
+
+		if len(f.Names) != 0 {
+			for range f.Names {
+				idents = append(idents, ast.NewIdent("_"))
+			}
+		} else {
+			idents = append(idents, ast.NewIdent("_"))
+		}
+
+		ignoredField = append(ignoredField, &ast.Field{
+			Names: idents,
+			Type:  f.Type,
+		})
 	}
 
 	return &ast.FuncDecl{
@@ -82,21 +109,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 				List: []*ast.Field{
 					{
 						Type: &ast.FuncType{
-							Params: &ast.FieldList{
-								List: []*ast.Field{
-									{
-										Names: []*ast.Ident{ast.NewIdent("ctx")},
-										Type: &ast.SelectorExpr{
-											X:   ast.NewIdent("context"),
-											Sel: ast.NewIdent("Context"),
-										},
-									},
-									{
-										Names: []*ast.Ident{ast.NewIdent("cdpID")},
-										Type:  ast.NewIdent("string"),
-									},
-								},
-							},
+							Params: fn.Params,
 							Results: &ast.FieldList{
 								List: returnList,
 							},
@@ -112,19 +125,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 						&ast.FuncLit{
 							Type: &ast.FuncType{
 								Params: &ast.FieldList{
-									List: []*ast.Field{
-										{
-											Names: []*ast.Ident{ast.NewIdent("_")},
-											Type: &ast.SelectorExpr{
-												X:   ast.NewIdent("context"),
-												Sel: ast.NewIdent("Context"),
-											},
-										},
-										{
-											Names: []*ast.Ident{ast.NewIdent("_")},
-											Type:  ast.NewIdent("string"),
-										},
-									},
+									List: ignoredField,
 								},
 								Results: &ast.FieldList{
 									List: returnList,
@@ -170,8 +171,9 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 															},
 															Args: []ast.Expr{
 																ast.NewIdent(
-																	`"failed to read file: %w"`,
+																	`"failed to read %s: %w"`,
 																),
+																ast.NewIdent("path"),
 																ast.NewIdent("err"),
 															},
 														},
@@ -180,22 +182,19 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 											},
 										},
 									},
-									// var session repository.ImportSession
+									// var {{varIdent}} {{returnType}}
 									&ast.DeclStmt{
 										Decl: &ast.GenDecl{
 											Tok: token.VAR,
 											Specs: []ast.Spec{
 												&ast.ValueSpec{
 													Names: []*ast.Ident{varIdent},
-													Type: &ast.SelectorExpr{
-														X:   ast.NewIdent("repository"),
-														Sel: ast.NewIdent("ImportSession"),
-													},
+													Type:  returnType,
 												},
 											},
 										},
 									},
-									// err = json.Unmarshal(bytes, &session)
+									// err = json.Unmarshal(bytes, {{unmarshalArg}})
 									&ast.AssignStmt{
 										Lhs: []ast.Expr{
 											ast.NewIdent("err"),
@@ -209,10 +208,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 												},
 												Args: []ast.Expr{
 													ast.NewIdent("bytes"),
-													&ast.UnaryExpr{
-														Op: token.AND,
-														X:  varIdent,
-													},
+													unmarshalArg,
 												},
 											},
 										},
@@ -246,7 +242,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 											},
 										},
 									},
-									// return session, nil
+									// return {{varIdent}}, nil
 									&ast.ReturnStmt{
 										Results: []ast.Expr{
 											varIdent,
@@ -325,6 +321,7 @@ func possiblyAddPackageName(fields []*ast.Field, packageName string) []*ast.Fiel
 				Sel: x,
 			}
 		}
+
 		newType = &ast.StarExpr{
 			X: newType,
 		}

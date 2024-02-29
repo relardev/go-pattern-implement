@@ -1,1 +1,1 @@
-type xxx func(context.Context, string) (*User, error)
+type xxx func(ars context.Context, a, b int) (*User, error)
