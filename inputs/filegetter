@@ -1,2 +1,1 @@
-func(ars context.Context, a, b int) (*User, error)
-
+func(ars context.Context, a, b int) *User
