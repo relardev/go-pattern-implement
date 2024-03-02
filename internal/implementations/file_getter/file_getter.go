@@ -94,6 +94,72 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 		})
 	}
 
+	var firstError []ast.Stmt
+	var secondError []ast.Stmt
+	if len(returnList) == 1 {
+		firstError = append(firstError, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: ast.NewIdent("panic"),
+				Args: []ast.Expr{
+					ast.NewIdent(
+						`"failed to read file"`,
+					),
+				},
+			},
+		})
+		secondError = append(secondError, &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: ast.NewIdent("panic"),
+				Args: []ast.Expr{
+					ast.NewIdent(
+						`"failed to unmarshal json"`,
+					),
+				},
+			},
+		})
+	}
+	if len(returnList) == 2 {
+		firstError = []ast.Stmt{
+			&ast.ReturnStmt{
+				Results: []ast.Expr{
+					zeroValue,
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("fmt"),
+							Sel: ast.NewIdent("Errorf"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent(
+								`"failed to read %s: %w"`,
+							),
+							ast.NewIdent("path"),
+							ast.NewIdent("err"),
+						},
+					},
+				},
+			},
+		}
+		secondError = []ast.Stmt{
+			&ast.ReturnStmt{
+				Results: []ast.Expr{
+					zeroValue,
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent("fmt"),
+							Sel: ast.NewIdent("Errorf"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent(
+								`"failed to unmarshal json: %w"`,
+							),
+							ast.NewIdent("err"),
+						},
+					},
+				},
+			},
+		}
+	}
+
 	return &ast.FuncDecl{
 		Name: ast.NewIdent("StateGetter"),
 		Type: &ast.FuncType{
@@ -160,26 +226,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 											Y:  ast.NewIdent("nil"),
 										},
 										Body: &ast.BlockStmt{
-											List: []ast.Stmt{
-												&ast.ReturnStmt{
-													Results: []ast.Expr{
-														zeroValue,
-														&ast.CallExpr{
-															Fun: &ast.SelectorExpr{
-																X:   ast.NewIdent("fmt"),
-																Sel: ast.NewIdent("Errorf"),
-															},
-															Args: []ast.Expr{
-																ast.NewIdent(
-																	`"failed to read %s: %w"`,
-																),
-																ast.NewIdent("path"),
-																ast.NewIdent("err"),
-															},
-														},
-													},
-												},
-											},
+											List: firstError,
 										},
 									},
 									// var {{varIdent}} {{returnType}}
@@ -221,25 +268,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 											Y:  ast.NewIdent("nil"),
 										},
 										Body: &ast.BlockStmt{
-											List: []ast.Stmt{
-												&ast.ReturnStmt{
-													Results: []ast.Expr{
-														zeroValue,
-														&ast.CallExpr{
-															Fun: &ast.SelectorExpr{
-																X:   ast.NewIdent("fmt"),
-																Sel: ast.NewIdent("Errorf"),
-															},
-															Args: []ast.Expr{
-																ast.NewIdent(
-																	`"failed to unmarshal json: %w"`,
-																),
-																ast.NewIdent("err"),
-															},
-														},
-													},
-												},
-											},
+											List: secondError,
 										},
 									},
 									// return {{varIdent}}, nil
@@ -287,8 +316,12 @@ func nameFromSelector(sel *ast.SelectorExpr) string {
 }
 
 func validateReturnList(returnList []*ast.Field) error {
-	if len(returnList) != 2 {
-		return errors.New("return list must have 2 elements")
+	if len(returnList) == 0 || len(returnList) > 2 {
+		return errors.New("return list must have 1 or 2 elements")
+	}
+
+	if len(returnList) == 1 {
+		return nil
 	}
 
 	secondReturn := returnList[1]
