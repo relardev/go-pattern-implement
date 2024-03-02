@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"strings"
 
@@ -14,22 +15,39 @@ import (
 	slogImp "component-generator/internal/implementations/slog"
 )
 
-const mainTemplate = `
+var templates = []string{
+	`
 package whatever
 
 {{TEXT}}
 
-`
+`,
+	`
+package whatever
+
+type xxx {{TEXT}}
+`,
+}
 
 func Implement(implementation, packageName string) {
 	text := getTextFromStdin()
 
-	filledTemplate := strings.Replace(mainTemplate, "{{TEXT}}", text, 1)
-
 	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, "main.go", filledTemplate, 0)
+
+	var parsed *ast.File
+	var err error
+
+	for _, template := range templates {
+		filledTemplate := strings.Replace(template, "{{TEXT}}", text, 1)
+
+		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
-		panic(err)
+		log.Fatalf("None of the themplates parsed, last error: %s", err)
 	}
 
 	var visitor func(node ast.Node) bool
@@ -46,7 +64,7 @@ func Implement(implementation, packageName string) {
 		os.Exit(1)
 	}
 
-	ast.Inspect(f, visitor)
+	ast.Inspect(parsed, visitor)
 }
 
 func getTextFromStdin() string {
