@@ -1,3 +1,5 @@
+package implement
+
 type Repo interface {
 	Find(id int) (domain.User, error)
 	FindBy(id1, id2 int) (domain.User, error)

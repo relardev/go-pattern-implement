@@ -1,0 +1,2 @@
+func(ars context.Context, a, b int) (*User, error)
+
