@@ -3,43 +3,32 @@ package prometheus
 import (
 	"fmt"
 	"go/ast"
-	"go/printer"
 	"go/token"
-	"os"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 )
 
-func Visitor(packageName string, fset *token.FileSet) func(node ast.Node) bool {
-	return func(node ast.Node) bool {
-		if node == nil {
-			return false
-		}
+func Visitor(packageName string, node ast.Node) (bool, []ast.Decl) {
+	decls := []ast.Decl{}
 
-		decls := []ast.Decl{}
+	switch typeSpec := node.(type) {
+	case *ast.TypeSpec:
+		decls = append(decls, structFromInterface(typeSpec.Name.Name, packageName))
+		decls = append(decls, newWraperFunction(typeSpec.Name.Name, packageName))
 
-		switch typeSpec := node.(type) {
-		case *ast.TypeSpec:
-			decls = append(decls, structFromInterface(typeSpec.Name.Name, packageName))
-			decls = append(decls, newWraperFunction(typeSpec.Name.Name, packageName))
-
-			switch interfaceNode := typeSpec.Type.(type) {
-			case *ast.InterfaceType:
-				for _, methodDef := range interfaceNode.Methods.List {
-					decls = append(decls, implementFunction(typeSpec.Name.Name, methodDef))
-				}
-			default:
-				panic("not an interface")
+		switch interfaceNode := typeSpec.Type.(type) {
+		case *ast.InterfaceType:
+			for _, methodDef := range interfaceNode.Methods.List {
+				decls = append(decls, implementFunction(typeSpec.Name.Name, methodDef))
 			}
 		default:
-			return true
+			panic("not an interface")
 		}
-
-		printer.Fprint(os.Stdout, fset, decls)
-
-		return false
+	default:
+		return true, nil
 	}
+	return false, decls
 }
 
 func structFromInterface(interfaceName, interfacePackage string) ast.Decl {

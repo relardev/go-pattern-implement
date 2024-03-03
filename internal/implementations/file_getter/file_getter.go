@@ -3,46 +3,36 @@ package filegetter
 import (
 	"errors"
 	"go/ast"
-	"go/printer"
 	"go/token"
 	"log"
-	"os"
 	"strings"
 	"unicode/utf8"
 )
 
-func Visitor(packageName string, fset *token.FileSet) func(node ast.Node) bool {
-	return func(node ast.Node) bool {
-		if node == nil {
-			return false
+func Visitor(packageName string, node ast.Node) (bool, []ast.Decl) {
+	decls := []ast.Decl{}
+
+	switch n := node.(type) {
+	case *ast.FuncType:
+		err := validateReturnList(n.Results.List)
+		if err != nil {
+			log.Println(err)
+			return false, nil
 		}
 
-		decls := []ast.Decl{}
-
-		switch n := node.(type) {
-		case *ast.FuncType:
-			err := validateReturnList(n.Results.List)
-			if err != nil {
-				log.Println(err)
-				return false
-			}
-
-			generated, err := tree(n, packageName)
-			if err != nil {
-				log.Println(err)
-				return false
-			}
-
-			decls = append(decls, generated)
-
-		default:
-			return true
+		generated, err := tree(n, packageName)
+		if err != nil {
+			log.Println(err)
+			return false, nil
 		}
 
-		printer.Fprint(os.Stdout, fset, decls)
+		decls = append(decls, generated)
 
-		return false
+	default:
+		return true, nil
 	}
+
+	return false, decls
 }
 
 func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {

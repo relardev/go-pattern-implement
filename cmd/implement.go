@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"log"
+	"os"
+	"strings"
 
-	"component-generator/internal/commands/implement"
+	"component-generator/internal/generator"
 
 	"github.com/spf13/cobra"
 )
@@ -24,7 +28,9 @@ and generate the implementation on stdout
 			log.Fatal(err)
 		}
 		implementation := args[0]
-		implement.Implement(implementation, packageName)
+		input := getTextFromStdin()
+		g := generator.NewGenerator(true)
+		g.Implement(input, implementation, packageName)
 	},
 }
 
@@ -36,4 +42,23 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getTextFromStdin() string {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	var lines []string
+
+	for scanner.Scan() {
+		input := scanner.Text()
+		lines = append(lines, input)
+	}
+
+	if scanner.Err() != nil {
+		fmt.Println("Error:", scanner.Err())
+	} else {
+		_ = fmt.Errorf("Error: %s", scanner.Err())
+	}
+
+	return strings.Join(lines, "\n")
 }
