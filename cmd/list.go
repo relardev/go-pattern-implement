@@ -23,16 +23,16 @@ var listCmd = &cobra.Command{
 
 		var list []string
 
+		g := generator.NewGenerator(false)
 		if available {
-			g := generator.NewGenerator(false)
-			list, err = g.GetAvailableImplementations(
+			list, err = g.ListAvailableImplementators(
 				getTextFromStdin(),
 			)
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else {
-			list = generator.Implementations
+			list = g.ListAllImplementators()
 		}
 		final := strings.Join(list, "\n")
 		fmt.Printf("%v", final+"\n")

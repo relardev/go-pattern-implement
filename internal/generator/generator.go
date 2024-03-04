@@ -14,12 +14,6 @@ import (
 	"component-generator/internal/implementations/prometheus"
 )
 
-// TODO maybe generate the list from implementations?
-var Implementations = []string{
-	"prometheus",
-	"filegetter",
-}
-
 var templates = []string{
 	`
 package whatever
@@ -48,14 +42,10 @@ func NewGenerator(printResult bool) *Generator {
 	return &Generator{printResult: printResult}
 }
 
-func (g *Generator) GetAvailableImplementations(input string) ([]string, error) {
-	packageName := "aaa"
+func (g *Generator) ListAvailableImplementators(input string) ([]string, error) {
 	fset := token.NewFileSet()
 
-	implementator := []implementator{
-		prometheus.New(packageName),
-		filegetter.New(packageName),
-	}
+	implementator := g.implementators("aaa")
 
 	list := make([]string, 0)
 
@@ -83,6 +73,11 @@ func (g *Generator) GetAvailableImplementations(input string) ([]string, error) 
 				_ = recover()
 			}()
 			ast.Inspect(parsed, wrappedVisitor)
+
+			if possible.Error() != nil {
+				return
+			}
+
 			list = append(list, possible.Name())
 		}
 		recoverable()
@@ -111,12 +106,9 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 		log.Fatalf("None of the themplates parsed, last error: %s", err)
 	}
 
-	implementators := []implementator{
-		prometheus.New(packageName),
-		filegetter.New(packageName),
-	}
-
 	var visitor func(ast.Node) (bool, []ast.Decl)
+
+	implementators := g.implementators(packageName)
 
 	for _, possible := range implementators {
 		if possible.Name() == implementation {
@@ -133,6 +125,24 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	wrappedVisitor := g.wrap(visitor)
 
 	ast.Inspect(parsed, wrappedVisitor)
+}
+
+func (g *Generator) ListAllImplementators() []string {
+	all := g.implementators("aaa")
+	names := make([]string, 0, len(all))
+
+	for _, i := range all {
+		names = append(names, i.Name())
+	}
+
+	return names
+}
+
+func (g *Generator) implementators(packageName string) []implementator {
+	return []implementator{
+		prometheus.New(packageName),
+		filegetter.New(packageName),
+	}
 }
 
 func (g *Generator) wrap(
