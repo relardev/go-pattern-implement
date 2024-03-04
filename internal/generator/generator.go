@@ -34,9 +34,10 @@ type xxx {{TEXT}}
 `,
 }
 
-type possibleImplementation struct {
-	name    string
-	visitor func(string, ast.Node) (bool, []ast.Decl)
+type implementator interface {
+	Visit(node ast.Node) (bool, []ast.Decl)
+	Name() string
+	Error() error
 }
 
 type Generator struct {
@@ -51,20 +52,14 @@ func (g *Generator) GetAvailableImplementations(input string) ([]string, error) 
 	packageName := "aaa"
 	fset := token.NewFileSet()
 
-	visitors := []possibleImplementation{
-		{
-			name:    "prometheus",
-			visitor: prometheus.Visitor,
-		},
-		{
-			name:    "filegetter",
-			visitor: filegetter.Visitor,
-		},
+	implementator := []implementator{
+		prometheus.New(packageName),
+		filegetter.New(packageName),
 	}
 
 	list := make([]string, 0)
 
-	for _, possible := range visitors {
+	for _, possible := range implementator {
 		var parsed *ast.File
 
 		var err error
@@ -82,13 +77,13 @@ func (g *Generator) GetAvailableImplementations(input string) ([]string, error) 
 			log.Fatalf("None of the themplates parsed, last error: %s", err)
 		}
 
-		wrappedVisitor := g.wrap(packageName, possible.visitor)
+		wrappedVisitor := g.wrap(possible.Visit)
 		recoverable := func() {
 			defer func() {
 				_ = recover()
 			}()
 			ast.Inspect(parsed, wrappedVisitor)
-			list = append(list, possible.name)
+			list = append(list, possible.Name())
 		}
 		recoverable()
 	}
@@ -116,33 +111,39 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 		log.Fatalf("None of the themplates parsed, last error: %s", err)
 	}
 
-	var visitor func(string, ast.Node) (bool, []ast.Decl)
+	implementators := []implementator{
+		prometheus.New(packageName),
+		filegetter.New(packageName),
+	}
 
-	switch implementation {
-	case "prometheus":
-		visitor = prometheus.Visitor
-	case "filegetter":
-		visitor = filegetter.Visitor
-	default:
+	var visitor func(ast.Node) (bool, []ast.Decl)
+
+	for _, possible := range implementators {
+		if possible.Name() == implementation {
+			visitor = possible.Visit
+			break
+		}
+	}
+
+	if visitor == nil {
 		fmt.Println("Unknown implementation", implementation)
 		os.Exit(1)
 	}
 
-	wrappedVisitor := g.wrap(packageName, visitor)
+	wrappedVisitor := g.wrap(visitor)
 
 	ast.Inspect(parsed, wrappedVisitor)
 }
 
 func (g *Generator) wrap(
-	packageName string,
-	visitor func(string, ast.Node) (bool, []ast.Decl),
+	visitor func(ast.Node) (bool, []ast.Decl),
 ) func(ast.Node) bool {
 	return func(node ast.Node) bool {
 		if node == nil {
 			return true
 		}
 
-		keepGoing, decls := visitor(packageName, node)
+		keepGoing, decls := visitor(node)
 		if !keepGoing {
 			if g.printResult {
 				printer.Fprint(os.Stdout, token.NewFileSet(), decls)

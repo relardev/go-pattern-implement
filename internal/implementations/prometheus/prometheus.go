@@ -9,13 +9,32 @@ import (
 	"unicode/utf8"
 )
 
-func Visitor(packageName string, node ast.Node) (bool, []ast.Decl) {
+type Implementator struct {
+	err         error
+	packageName string
+}
+
+func New(packageName string) *Implementator {
+	return &Implementator{
+		packageName: packageName,
+	}
+}
+
+func (i *Implementator) Name() string {
+	return "prometheus"
+}
+
+func (i *Implementator) Error() error {
+	return i.err
+}
+
+func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	decls := []ast.Decl{}
 
 	switch typeSpec := node.(type) {
 	case *ast.TypeSpec:
-		decls = append(decls, structFromInterface(typeSpec.Name.Name, packageName))
-		decls = append(decls, newWraperFunction(typeSpec.Name.Name, packageName))
+		decls = append(decls, structFromInterface(typeSpec.Name.Name, i.packageName))
+		decls = append(decls, newWraperFunction(typeSpec.Name.Name, i.packageName))
 
 		switch interfaceNode := typeSpec.Type.(type) {
 		case *ast.InterfaceType:

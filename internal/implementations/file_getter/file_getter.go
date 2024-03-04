@@ -9,7 +9,26 @@ import (
 	"unicode/utf8"
 )
 
-func Visitor(packageName string, node ast.Node) (bool, []ast.Decl) {
+type Implementator struct {
+	err         error
+	packageName string
+}
+
+func New(packageName string) *Implementator {
+	return &Implementator{
+		packageName: packageName,
+	}
+}
+
+func (i *Implementator) Name() string {
+	return "filegetter"
+}
+
+func (i *Implementator) Error() error {
+	return i.err
+}
+
+func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	decls := []ast.Decl{}
 
 	switch n := node.(type) {
@@ -20,7 +39,7 @@ func Visitor(packageName string, node ast.Node) (bool, []ast.Decl) {
 			return false, nil
 		}
 
-		generated, err := tree(n, packageName)
+		generated, err := tree(n, i.packageName)
 		if err != nil {
 			log.Println(err)
 			return false, nil
