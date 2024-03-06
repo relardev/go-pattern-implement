@@ -20,3 +20,8 @@ func Execute() {
 		os.Exit(1)
 	}
 }
+
+func init() {
+	rootCmd.PersistentFlags().
+		StringP("file", "f", "", "path to file with interface to implement")
+}

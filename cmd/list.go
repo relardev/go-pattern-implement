@@ -21,12 +21,17 @@ var listCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		filePath, err := cmd.Flags().GetString("file")
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var list []string
 
 		g := generator.NewGenerator(false)
 		if available {
 			list, err = g.ListAvailableImplementators(
-				getTextFromStdin(),
+				getInput(filePath),
 			)
 			if err != nil {
 				log.Fatal(err)
@@ -45,7 +50,7 @@ func init() {
 			"available",
 			"a",
 			false,
-			"List only available implementations based on stdin.",
+			"List only available implementations based on stdin or file.",
 		)
 	rootCmd.AddCommand(listCmd)
 }
