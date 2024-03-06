@@ -1,3 +1,4 @@
 type Thing interface {
 	DoStuff(id int)
+	SomethingElse(domain.User) (int, bool, error)
 }

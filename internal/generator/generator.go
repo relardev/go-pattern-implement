@@ -140,7 +140,8 @@ func (g *Generator) ListAllImplementators() []string {
 
 func (g *Generator) implementators(packageName string) []implementator {
 	return []implementator{
-		prometheus.New(packageName),
+		prometheus.New(packageName, "prometheus", "prometheus"),
+		prometheus.New(packageName, "statsd", "statsd"),
 		filegetter.New(packageName),
 	}
 }
