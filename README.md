@@ -6,7 +6,7 @@ go run main.go --package asdf prometheus
 
 TODO:
 - [x] Prometheus
-- [ ] StatsD
+- [x] StatsD
 - [ ] Cache
 - [ ] Store
 - [ ] Semaphore

@@ -1,4 +1,4 @@
-package prometheus
+package metrics
 
 import (
 	"fmt"
@@ -10,18 +10,22 @@ import (
 )
 
 type Implementator struct {
-	err         error
-	packageName string
+	err                      error
+	packageName              string
+	implementatorName        string
+	observabilityPackageName string
 }
 
-func New(packageName string) *Implementator {
+func New(sourcePackageName, implementatorName, observabilityPackageName string) *Implementator {
 	return &Implementator{
-		packageName: packageName,
+		packageName:              sourcePackageName,
+		implementatorName:        implementatorName,
+		observabilityPackageName: observabilityPackageName,
 	}
 }
 
 func (i *Implementator) Name() string {
-	return "prometheus"
+	return i.implementatorName
 }
 
 func (i *Implementator) Error() error {
@@ -39,7 +43,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 		switch interfaceNode := typeSpec.Type.(type) {
 		case *ast.InterfaceType:
 			for _, methodDef := range interfaceNode.Methods.List {
-				decls = append(decls, implementFunction(typeSpec.Name.Name, methodDef))
+				decls = append(decls, i.implementFunction(typeSpec.Name.Name, methodDef))
 			}
 		default:
 			panic("not an interface")
@@ -124,7 +128,7 @@ func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 	}
 }
 
-func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
+func (i *Implementator) implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 	firstLetter := string(unicode.ToLower(rune(interfaceName[0])))
 	funcName := field.Names[0].Name
 
@@ -235,17 +239,21 @@ func implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 		},
 		Name: ast.NewIdent(funcName),
 		Type: typeDef,
-		Body: measuredBody(callStmt, returnExpr, measurePrefix),
+		Body: i.measuredBody(callStmt, returnExpr, measurePrefix),
 	}
 }
 
-func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string) *ast.BlockStmt {
+func (i *Implementator) measuredBody(
+	callStmt ast.Stmt,
+	returnExpr []ast.Expr,
+	measurePrefix string,
+) *ast.BlockStmt {
 	blockStmt := &ast.BlockStmt{
 		List: []ast.Stmt{
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("prometheus"),
+						X:   ast.NewIdent(i.observabilityPackageName),
 						Sel: ast.NewIdent("Increment"),
 					},
 					Args: []ast.Expr{
@@ -259,7 +267,7 @@ func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string
 			&ast.DeferStmt{
 				Call: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent("prometheus"),
+						X:   ast.NewIdent(i.observabilityPackageName),
 						Sel: ast.NewIdent("ObserveDuration"),
 					},
 					Args: []ast.Expr{
@@ -287,7 +295,7 @@ func measuredBody(callStmt ast.Stmt, returnExpr []ast.Expr, measurePrefix string
 				&ast.ExprStmt{
 					X: &ast.CallExpr{
 						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("prometheus"),
+							X:   ast.NewIdent(i.observabilityPackageName),
 							Sel: ast.NewIdent("Increment"),
 						},
 						Args: []ast.Expr{
