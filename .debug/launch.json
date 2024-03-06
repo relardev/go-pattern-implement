@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "go",
+      "request": "launch",
+      "name": "prometheus",
+      "program": "main.go",
+      "showLog": true,
+      "args": [
+        "implement",
+        "--package=qqq",
+        "--file=inputs/prometheus",
+        "prometheus"
+      ]
+    }
+  ]
+}

@@ -15,7 +15,7 @@ import (
 var implementCmd = &cobra.Command{
 	Use:   "implement <implementation>",
 	Short: "Implemen an interface",
-	Long: `Implemen an interface. This command will read stdin
+	Long: `Implemen an interface. This command will read stdin or file
 and generate the implementation on stdout
 
 	to find out available implementations, run:
@@ -27,8 +27,15 @@ and generate the implementation on stdout
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		filePath, err := cmd.Flags().GetString("file")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		input := getInput(filePath)
+
 		implementation := args[0]
-		input := getTextFromStdin()
 		g := generator.NewGenerator(true)
 		g.Implement(input, implementation, packageName)
 	},
@@ -42,6 +49,19 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func getInput(filePath string) string {
+	if filePath == "" {
+		return getTextFromStdin()
+	}
+
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(file)
 }
 
 func getTextFromStdin() string {
