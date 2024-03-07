@@ -12,6 +12,7 @@ import (
 
 	filegetter "component-generator/internal/implementations/file_getter"
 	"component-generator/internal/implementations/metrics"
+	"component-generator/internal/implementations/store"
 )
 
 var templates = []string{
@@ -143,6 +144,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		metrics.New(packageName, "prometheus", "prometheus"),
 		metrics.New(packageName, "statsd", "statsd"),
 		filegetter.New(packageName),
+		store.New(packageName),
 	}
 }
 
