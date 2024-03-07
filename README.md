@@ -4,7 +4,7 @@
 go run main.go --package asdf prometheus
 ```
 
-TODO:
+Ideas:
 - [x] Prometheus
 - [x] StatsD
 - [ ] Cache
@@ -14,4 +14,4 @@ TODO:
 - [x] File getter
 - [ ] Slog
 - [ ] Log
-
+- [ ] Filter
