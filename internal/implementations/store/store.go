@@ -9,8 +9,13 @@ import (
 )
 
 type Implementator struct {
-	err         error
-	packageName string
+	err           error
+	packageName   string
+	interfaceName string
+	methodDef     *ast.Field
+	funcName      string
+	variableName  string
+	lockName      string
 }
 
 func New(sourcePackageName string) *Implementator {
@@ -37,45 +42,50 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 			if len(interfaceNode.Methods.List) != 1 {
 				panic("interface should have only one method")
 			}
-			methodDef := interfaceNode.Methods.List[0]
+			i.methodDef = interfaceNode.Methods.List[0]
 
-			returns := methodDef.Type.(*ast.FuncType).Results.List
+			returns := i.methodDef.Type.(*ast.FuncType).Results.List
 
-			if len(returns) != 1 && len(returns) != 2 {
-				panic("method should have one or two returns")
+			if len(returns) != 2 {
+				panic("method should have two returns")
 			}
 
-			resultName := naming.VariableNameFromExpr(returns[0].Type)
-			resultType := "[]*model.Segment"
+			if len(i.methodDef.Type.(*ast.FuncType).Params.List) != 0 {
+				panic("method should have no parameters")
+			}
+
+			i.interfaceName = typeSpec.Name.Name
+			i.variableName = naming.VariableNameFromExpr(returns[0].Type)
+			i.lockName = i.variableName + "Lock"
+			resultType := returns[0].Type
 
 			field := code.FieldFromTypeSpec(typeSpec, i.packageName)
 
 			fields := []code.StructField{
 				{
-					Name: "repo",
-					Type: field.Type,
+					Name:    "repo",
+					TypeStr: field.TypeStr,
 				},
 				{
-					Name: "interval",
-					Type: "time.Duration",
+					Name:    "interval",
+					TypeStr: "time.Duration",
 				},
 				{
-					Name: resultName + "Lock",
-					Type: "sync.RWMutex",
+					Name:    i.lockName,
+					TypeStr: "sync.RWMutex",
 				},
 				{
-					Name: resultName,
-					Type: resultType,
+					Name:     i.variableName,
+					TypeSpec: resultType,
 				},
 			}
 			decls = append(decls, code.Struct("Store", fields...))
-			decls = append(decls, newFunc(typeSpec.Name.Name, i.packageName))
-			decls = append(decls, loopFunc(typeSpec.Name.Name, i.packageName))
-			decls = append(decls, loadFunc(typeSpec.Name.Name, i.packageName))
 
-			for range interfaceNode.Methods.List {
-				// decls = append(decls, i.implementFunction(typeSpec.Name.Name, methodDef))
-			}
+			i.funcName = i.methodDef.Names[0].Name
+			decls = append(decls, newFunc(field.TypeStr, i.packageName))
+			decls = append(decls, i.loopFunc())
+			decls = append(decls, i.loadFunc())
+			decls = append(decls, i.implementFunction())
 		default:
 			panic("not an interface")
 		}
@@ -93,10 +103,7 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 				List: []*ast.Field{
 					{
 						Names: []*ast.Ident{ast.NewIdent("repo")},
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent("repository"),
-							Sel: ast.NewIdent("Segment"),
-						},
+						Type:  ast.NewIdent(interfaceName),
 					},
 					{
 						Names: []*ast.Ident{ast.NewIdent("interval")},
@@ -170,7 +177,7 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 	return newFunc
 }
 
-func loopFunc(interfaceName, interfacePackage string) ast.Decl {
+func (i *Implementator) loopFunc() ast.Decl {
 	loopFunc := &ast.FuncDecl{
 		Name: ast.NewIdent("loop"),
 		Recv: &ast.FieldList{
@@ -223,21 +230,8 @@ func loopFunc(interfaceName, interfacePackage string) ast.Decl {
 	return loopFunc
 }
 
-// Generate function like this:
-//
-//	func (s *Store) load() {
-//		segments, _, err := s.segmentRepo.GetSegments()
-//		if err != nil {
-//			slog.Error("loading segments failed", "err", err)
-//			return
-//		}
-//
-//		s.segmentLock.Lock()
-//		s.segments = segments
-//		s.segmentLock.Unlock()
-//	}
-func loadFunc(interfaceName, interfacePackage string) ast.Decl {
-	loadFunc := &ast.FuncDecl{
+func (i *Implementator) loadFunc() ast.Decl {
+	return &ast.FuncDecl{
 		Name: ast.NewIdent("load"),
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
@@ -258,8 +252,7 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 				// segments, _, err := s.segmentRepo.GetSegments()
 				&ast.AssignStmt{
 					Lhs: []ast.Expr{
-						ast.NewIdent("segments"),
-						ast.NewIdent("_"),
+						ast.NewIdent(i.variableName),
 						ast.NewIdent("err"),
 					},
 					Tok: token.DEFINE,
@@ -268,9 +261,9 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 							Fun: &ast.SelectorExpr{
 								X: &ast.SelectorExpr{
 									X:   ast.NewIdent("s"),
-									Sel: ast.NewIdent("segmentRepo"),
+									Sel: ast.NewIdent("repo"),
 								},
-								Sel: ast.NewIdent("GetSegments"),
+								Sel: ast.NewIdent(i.funcName),
 							},
 						},
 					},
@@ -288,12 +281,11 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
 									Fun: &ast.SelectorExpr{
-										X:   ast.NewIdent("slog"),
-										Sel: ast.NewIdent("Error"),
+										X:   ast.NewIdent("log"),
+										Sel: ast.NewIdent("Println"),
 									},
 									Args: []ast.Expr{
-										ast.NewIdent(`"loading segments failed"`),
-										ast.NewIdent(`"err"`),
+										ast.NewIdent(`"loading store failed"`),
 										ast.NewIdent("err"),
 									},
 								},
@@ -309,7 +301,7 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 						Fun: &ast.SelectorExpr{
 							X: &ast.SelectorExpr{
 								X:   ast.NewIdent("s"),
-								Sel: ast.NewIdent("segmentLock"),
+								Sel: ast.NewIdent(i.lockName),
 							},
 							Sel: ast.NewIdent("Lock"),
 						},
@@ -317,9 +309,9 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 				},
 				// s.segments = segments
 				&ast.AssignStmt{
-					Lhs: []ast.Expr{ast.NewIdent("s.segments")},
+					Lhs: []ast.Expr{ast.NewIdent("s." + i.variableName)},
 					Tok: token.ASSIGN,
-					Rhs: []ast.Expr{ast.NewIdent("segments")},
+					Rhs: []ast.Expr{ast.NewIdent(i.variableName)},
 				},
 				// s.segmentLock.Unlock()
 				&ast.ExprStmt{
@@ -327,7 +319,7 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 						Fun: &ast.SelectorExpr{
 							X: &ast.SelectorExpr{
 								X:   ast.NewIdent("s"),
-								Sel: ast.NewIdent("segmentLock"),
+								Sel: ast.NewIdent(i.lockName),
 							},
 							Sel: ast.NewIdent("Unlock"),
 						},
@@ -336,5 +328,61 @@ func loadFunc(interfaceName, interfacePackage string) ast.Decl {
 			},
 		},
 	}
-	return loadFunc
+}
+
+func (i *Implementator) implementFunction() ast.Decl {
+	return &ast.FuncDecl{
+		Name: ast.NewIdent(i.funcName),
+		Recv: &ast.FieldList{
+			List: []*ast.Field{
+				{
+					Names: []*ast.Ident{ast.NewIdent("s")},
+					Type: &ast.StarExpr{
+						X: ast.NewIdent("Store"),
+					},
+				},
+			},
+		},
+		Type: &ast.FuncType{
+			Results: i.methodDef.Type.(*ast.FuncType).Results,
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				// s.segmentLock.RLock()
+				&ast.ExprStmt{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.SelectorExpr{
+								X:   ast.NewIdent("s"),
+								Sel: ast.NewIdent(i.lockName),
+							},
+							Sel: ast.NewIdent("RLock"),
+						},
+					},
+				},
+				// defer s.segmentLock.RUnlock()
+				&ast.DeferStmt{
+					Call: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.SelectorExpr{
+								X:   ast.NewIdent("s"),
+								Sel: ast.NewIdent(i.lockName),
+							},
+							Sel: ast.NewIdent("RUnlock"),
+						},
+					},
+				},
+				// return s.segments, nil, nil
+				&ast.ReturnStmt{
+					Results: []ast.Expr{
+						&ast.SelectorExpr{
+							X:   ast.NewIdent("s"),
+							Sel: ast.NewIdent(i.variableName),
+						},
+						ast.NewIdent("nil"),
+					},
+				},
+			},
+		},
+	}
 }
