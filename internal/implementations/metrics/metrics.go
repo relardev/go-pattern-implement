@@ -7,6 +7,9 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"component-generator/internal/code"
+	naming "component-generator/internal/naming"
 )
 
 type Implementator struct {
@@ -37,7 +40,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 
 	switch typeSpec := node.(type) {
 	case *ast.TypeSpec:
-		decls = append(decls, structFromInterface(typeSpec.Name.Name, i.packageName))
+		decls = append(decls, code.Struct(typeSpec.Name.Name, code.FieldFromTypeSpec(typeSpec, i.packageName)))
 		decls = append(decls, newWraperFunction(typeSpec.Name.Name, i.packageName))
 
 		switch interfaceNode := typeSpec.Type.(type) {
@@ -52,31 +55,6 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 		return true, nil
 	}
 	return false, decls
-}
-
-func structFromInterface(interfaceName, interfacePackage string) ast.Decl {
-	firstLetter := unicode.ToLower(rune(interfaceName[0]))
-
-	return &ast.GenDecl{
-		Tok: token.TYPE,
-		Specs: []ast.Spec{
-			&ast.TypeSpec{
-				Name: ast.NewIdent(interfaceName),
-				Type: &ast.StructType{
-					Fields: &ast.FieldList{
-						List: []*ast.Field{
-							{
-								Names: []*ast.Ident{ast.NewIdent(string(firstLetter))},
-								Type: ast.NewIdent(
-									fmt.Sprintf("%s.%s", interfacePackage, interfaceName),
-								),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
@@ -148,7 +126,7 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		case *ast.StarExpr:
 			name = "arg"
 		case *ast.SelectorExpr:
-			name = nameFromSelector(n)
+			name = naming.VariableNameFromExpr(n)
 		case *ast.ArrayType:
 			name = "arg"
 		case *ast.MapType:
