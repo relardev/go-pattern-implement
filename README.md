@@ -15,3 +15,5 @@ Ideas:
 - [ ] Slog
 - [ ] Log
 - [ ] Filter
+- [ ] Goroutine Channel Hinge
+- [ ] Batching
