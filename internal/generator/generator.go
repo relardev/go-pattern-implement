@@ -85,13 +85,7 @@ func (g *Generator) ListAvailableImplementators(input string) ([]string, error) 
 		recoverable()
 	}
 
-	namesWithDescription := make([]string, 0, len(list))
-
-	for _, i := range list {
-		namesWithDescription = append(namesWithDescription, i.Name()+" - "+i.Description())
-	}
-
-	return namesWithDescription, nil
+	return g.stringRepresentations(list), nil
 }
 
 func (g *Generator) Implement(input, implementation, packageName string) {
@@ -137,9 +131,13 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 
 func (g *Generator) ListAllImplementators() []string {
 	all := g.implementators("aaa")
-	names := make([]string, 0, len(all))
+	return g.stringRepresentations(all)
+}
 
-	for _, i := range all {
+func (g *Generator) stringRepresentations(impl []implementator) []string {
+	names := make([]string, 0, len(impl))
+
+	for _, i := range impl {
 		names = append(names, i.Name()+" - "+i.Description())
 	}
 
