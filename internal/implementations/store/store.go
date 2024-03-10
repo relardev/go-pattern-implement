@@ -8,24 +8,50 @@ import (
 	"component-generator/internal/naming"
 )
 
+type NewBehaviour bool
+
+const (
+	PanicInNew       NewBehaviour = true
+	ReturnErrorInNew NewBehaviour = false
+)
+
 type Implementator struct {
+	// args
+	packageName  string
+	newBehaviour NewBehaviour
+
+	// local vars
 	err           error
-	packageName   string
 	interfaceName string
 	methodDef     *ast.Field
 	funcName      string
 	variableName  string
 	lockName      string
+	argIsContext  bool
 }
 
-func New(sourcePackageName string) *Implementator {
+func New(sourcePackageName string, panicInNew NewBehaviour) *Implementator {
 	return &Implementator{
-		packageName: sourcePackageName,
+		packageName:  sourcePackageName,
+		newBehaviour: panicInNew,
 	}
 }
 
 func (i *Implementator) Name() string {
-	return "store"
+	if i.newBehaviour {
+		return "store-panic"
+	} else {
+		return "store-err"
+	}
+}
+
+func (i *Implementator) Description() string {
+	base := "store for rarely changeing data, that you want to have in memory"
+	if i.newBehaviour {
+		return base + " (panics in New)"
+	} else {
+		return base + " (returns error in New)"
+	}
 }
 
 func (i *Implementator) Error() error {
@@ -50,7 +76,13 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("method should have two returns")
 			}
 
-			if len(i.methodDef.Type.(*ast.FuncType).Params.List) != 0 {
+			args := i.methodDef.Type.(*ast.FuncType).Params.List
+
+			if len(args) == 1 {
+				i.argIsContext = code.IsContext(args[0].Type)
+			}
+
+			if !(len(args) == 0 || i.argIsContext) {
 				panic("method should have no parameters")
 			}
 
@@ -67,10 +99,6 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 					TypeStr: field.TypeStr,
 				},
 				{
-					Name:    "interval",
-					TypeStr: "time.Duration",
-				},
-				{
 					Name:    i.lockName,
 					TypeStr: "sync.RWMutex",
 				},
@@ -82,7 +110,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 			decls = append(decls, code.Struct("Store", fields...))
 
 			i.funcName = i.methodDef.Names[0].Name
-			decls = append(decls, newFunc(field.TypeStr, i.packageName))
+			decls = append(decls, i.newFunc())
 			decls = append(decls, i.loopFunc())
 			decls = append(decls, i.loadFunc())
 			decls = append(decls, i.implementFunction())
@@ -95,7 +123,34 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	return false, decls
 }
 
-func newFunc(interfaceName, interfacePackage string) ast.Decl {
+func (i *Implementator) newFunc() ast.Decl {
+	returns := []*ast.Field{
+		{
+			Type: &ast.StarExpr{
+				X: ast.NewIdent("Store"),
+			},
+		},
+	}
+
+	iferr := code.IfErrReturnErr()
+
+	switch i.newBehaviour {
+	case PanicInNew:
+		iferr.Body.List[0] = &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: ast.NewIdent("panic"),
+				Args: []ast.Expr{
+					ast.NewIdent("err"),
+				},
+			},
+		}
+
+	case ReturnErrorInNew:
+		returns = append(returns, &ast.Field{
+			Type: ast.NewIdent("error"),
+		})
+	}
+
 	newFunc := &ast.FuncDecl{
 		Name: ast.NewIdent("New"),
 		Type: &ast.FuncType{
@@ -103,7 +158,7 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 				List: []*ast.Field{
 					{
 						Names: []*ast.Ident{ast.NewIdent("repo")},
-						Type:  ast.NewIdent(interfaceName),
+						Type:  ast.NewIdent(i.interfaceName),
 					},
 					{
 						Names: []*ast.Ident{ast.NewIdent("interval")},
@@ -112,19 +167,13 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 				},
 			},
 			Results: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Type: &ast.StarExpr{
-							X: ast.NewIdent("Store"),
-						},
-					},
-				},
+				List: returns,
 			},
 		},
 		// Function body
 		Body: &ast.BlockStmt{
 			List: []ast.Stmt{
-				// s := Store{interval: interval, segmentRepo: segmentRepo}
+				// s := Store{segmentRepo: segmentRepo}
 				&ast.AssignStmt{
 					Lhs: []ast.Expr{ast.NewIdent("s")},
 					Tok: token.DEFINE,
@@ -133,10 +182,6 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 							Type: ast.NewIdent("Store"),
 							Elts: []ast.Expr{
 								&ast.KeyValueExpr{
-									Key:   ast.NewIdent("interval"),
-									Value: ast.NewIdent("interval"),
-								},
-								&ast.KeyValueExpr{
 									Key:   ast.NewIdent("repo"),
 									Value: ast.NewIdent("repo"),
 								},
@@ -144,21 +189,31 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 						},
 					},
 				},
-				// s.load()
-				&ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("s"),
-							Sel: ast.NewIdent("load"),
+				// err := s.load()
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						ast.NewIdent("err"),
+					},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("s"),
+								Sel: ast.NewIdent("load"),
+							},
 						},
 					},
 				},
-				// go s.loop()
+				iferr,
+				// go s.loop(interval)
 				&ast.GoStmt{
 					Call: &ast.CallExpr{
 						Fun: &ast.SelectorExpr{
 							X:   ast.NewIdent("s"),
 							Sel: ast.NewIdent("loop"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("interval"),
 						},
 					},
 				},
@@ -191,7 +246,14 @@ func (i *Implementator) loopFunc() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
-			Params: &ast.FieldList{},
+			Params: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Names: []*ast.Ident{ast.NewIdent("interval")},
+						Type:  ast.NewIdent("time.Duration"),
+					},
+				},
+			},
 		},
 		// Function body
 		Body: &ast.BlockStmt{
@@ -200,7 +262,7 @@ func (i *Implementator) loopFunc() ast.Decl {
 				&ast.ForStmt{
 					Body: &ast.BlockStmt{
 						List: []ast.Stmt{
-							// time.Sleep(s.interval)
+							// time.Sleep(interval)
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
 									Fun: &ast.SelectorExpr{
@@ -208,7 +270,7 @@ func (i *Implementator) loopFunc() ast.Decl {
 										Sel: ast.NewIdent("Sleep"),
 									},
 									Args: []ast.Expr{
-										ast.NewIdent("s.interval"),
+										ast.NewIdent("interval"),
 									},
 								},
 							},
@@ -231,6 +293,13 @@ func (i *Implementator) loopFunc() ast.Decl {
 }
 
 func (i *Implementator) loadFunc() ast.Decl {
+	interfaceMethodCallArg := []ast.Expr{}
+	if i.argIsContext {
+		interfaceMethodCallArg = append(
+			interfaceMethodCallArg,
+			ast.NewIdent("context.Background()"),
+		)
+	}
 	return &ast.FuncDecl{
 		Name: ast.NewIdent("load"),
 		Recv: &ast.FieldList{
@@ -244,7 +313,13 @@ func (i *Implementator) loadFunc() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
-			Params: &ast.FieldList{},
+			Results: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Type: ast.NewIdent("error"),
+					},
+				},
+			},
 		},
 		// Function body
 		Body: &ast.BlockStmt{
@@ -265,36 +340,11 @@ func (i *Implementator) loadFunc() ast.Decl {
 								},
 								Sel: ast.NewIdent(i.funcName),
 							},
+							Args: interfaceMethodCallArg,
 						},
 					},
 				},
-				// if err != nil {
-				&ast.IfStmt{
-					Cond: &ast.BinaryExpr{
-						X:  ast.NewIdent("err"),
-						Op: token.NEQ,
-						Y:  ast.NewIdent("nil"),
-					},
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							// slog.Error("loading segments failed", "err", err)
-							&ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   ast.NewIdent("log"),
-										Sel: ast.NewIdent("Println"),
-									},
-									Args: []ast.Expr{
-										ast.NewIdent(`"loading store failed"`),
-										ast.NewIdent("err"),
-									},
-								},
-							},
-							// return
-							&ast.ReturnStmt{},
-						},
-					},
-				},
+				code.IfErrReturnErr(),
 				// s.segmentLock.Lock()
 				&ast.ExprStmt{
 					X: &ast.CallExpr{
@@ -331,6 +381,13 @@ func (i *Implementator) loadFunc() ast.Decl {
 }
 
 func (i *Implementator) implementFunction() ast.Decl {
+	params := i.methodDef.Type.(*ast.FuncType).Params.List
+	if i.argIsContext {
+		params[0] = &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent("_")},
+			Type:  ast.NewIdent("context.Context"),
+		}
+	}
 	return &ast.FuncDecl{
 		Name: ast.NewIdent(i.funcName),
 		Recv: &ast.FieldList{
@@ -344,6 +401,7 @@ func (i *Implementator) implementFunction() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
+			Params:  &ast.FieldList{List: params},
 			Results: i.methodDef.Type.(*ast.FuncType).Results,
 		},
 		Body: &ast.BlockStmt{

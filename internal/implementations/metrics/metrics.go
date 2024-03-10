@@ -31,6 +31,10 @@ func (i *Implementator) Name() string {
 	return i.implementatorName
 }
 
+func (i *Implementator) Description() string {
+	return "Generates observability metrics for a given interface"
+}
+
 func (i *Implementator) Error() error {
 	return i.err
 }

@@ -8,7 +8,7 @@ Ideas:
 - [x] Prometheus
 - [x] StatsD
 - [ ] Cache
-- [ ] Store
+- [x] Store
 - [ ] Semaphore
 - [ ] Errorgroup
 - [x] File getter

@@ -52,3 +52,31 @@ func FieldFromTypeSpec(typeSpec *ast.TypeSpec, packageName string) StructField {
 		TypeStr: packageName + "." + name,
 	}
 }
+
+func IfErrReturnErr(additionalReturns ...ast.Expr) *ast.IfStmt {
+	additionalReturns = append(additionalReturns, ast.NewIdent("err"))
+	return &ast.IfStmt{
+		Cond: &ast.BinaryExpr{
+			X:  ast.NewIdent("err"),
+			Op: token.NEQ,
+			Y:  ast.NewIdent("nil"),
+		},
+		Body: &ast.BlockStmt{
+			List: []ast.Stmt{
+				&ast.ReturnStmt{
+					Results: additionalReturns,
+				},
+			},
+		},
+	}
+}
+
+func IsContext(expr ast.Expr) bool {
+	switch t := expr.(type) {
+	case *ast.SelectorExpr:
+		x, ok := t.X.(*ast.Ident)
+		return ok && x.Name == "context" && t.Sel.Name == "Context"
+	default:
+		return false
+	}
+}
