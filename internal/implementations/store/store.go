@@ -8,9 +8,20 @@ import (
 	"component-generator/internal/naming"
 )
 
+type NewBehaviour bool
+
+const (
+	PanicInNew       NewBehaviour = true
+	ReturnErrorInNew NewBehaviour = false
+)
+
 type Implementator struct {
+	// args
+	packageName  string
+	newBehaviour NewBehaviour
+
+	// local vars
 	err           error
-	packageName   string
 	interfaceName string
 	methodDef     *ast.Field
 	funcName      string
@@ -18,14 +29,28 @@ type Implementator struct {
 	lockName      string
 }
 
-func New(sourcePackageName string) *Implementator {
+func New(sourcePackageName string, panicInNew NewBehaviour) *Implementator {
 	return &Implementator{
-		packageName: sourcePackageName,
+		packageName:  sourcePackageName,
+		newBehaviour: panicInNew,
 	}
 }
 
 func (i *Implementator) Name() string {
-	return "store"
+	if i.newBehaviour {
+		return "store-panic"
+	} else {
+		return "store-err"
+	}
+}
+
+func (i *Implementator) Description() string {
+	base := "store for rarely changeing data, that you want to have in memory"
+	if i.newBehaviour {
+		return base + " (panics in New)"
+	} else {
+		return base + " (returns error in New)"
+	}
 }
 
 func (i *Implementator) Error() error {
@@ -82,7 +107,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 			decls = append(decls, code.Struct("Store", fields...))
 
 			i.funcName = i.methodDef.Names[0].Name
-			decls = append(decls, newFunc(field.TypeStr, i.packageName))
+			decls = append(decls, i.newFunc())
 			decls = append(decls, i.loopFunc())
 			decls = append(decls, i.loadFunc())
 			decls = append(decls, i.implementFunction())
@@ -95,7 +120,34 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	return false, decls
 }
 
-func newFunc(interfaceName, interfacePackage string) ast.Decl {
+func (i *Implementator) newFunc() ast.Decl {
+	returns := []*ast.Field{
+		{
+			Type: &ast.StarExpr{
+				X: ast.NewIdent("Store"),
+			},
+		},
+	}
+
+	iferr := code.IfErrReturnErr()
+
+	switch i.newBehaviour {
+	case PanicInNew:
+		iferr.Body.List[0] = &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: ast.NewIdent("panic"),
+				Args: []ast.Expr{
+					ast.NewIdent("err"),
+				},
+			},
+		}
+
+	case ReturnErrorInNew:
+		returns = append(returns, &ast.Field{
+			Type: ast.NewIdent("error"),
+		})
+	}
+
 	newFunc := &ast.FuncDecl{
 		Name: ast.NewIdent("New"),
 		Type: &ast.FuncType{
@@ -103,7 +155,7 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 				List: []*ast.Field{
 					{
 						Names: []*ast.Ident{ast.NewIdent("repo")},
-						Type:  ast.NewIdent(interfaceName),
+						Type:  ast.NewIdent(i.interfaceName),
 					},
 					{
 						Names: []*ast.Ident{ast.NewIdent("interval")},
@@ -112,13 +164,7 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 				},
 			},
 			Results: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Type: &ast.StarExpr{
-							X: ast.NewIdent("Store"),
-						},
-					},
-				},
+				List: returns,
 			},
 		},
 		// Function body
@@ -144,15 +190,22 @@ func newFunc(interfaceName, interfacePackage string) ast.Decl {
 						},
 					},
 				},
-				// s.load()
-				&ast.ExprStmt{
-					X: &ast.CallExpr{
-						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent("s"),
-							Sel: ast.NewIdent("load"),
+				// err := s.load()
+				&ast.AssignStmt{
+					Lhs: []ast.Expr{
+						ast.NewIdent("err"),
+					},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{
+						&ast.CallExpr{
+							Fun: &ast.SelectorExpr{
+								X:   ast.NewIdent("s"),
+								Sel: ast.NewIdent("load"),
+							},
 						},
 					},
 				},
+				iferr,
 				// go s.loop()
 				&ast.GoStmt{
 					Call: &ast.CallExpr{
@@ -244,7 +297,13 @@ func (i *Implementator) loadFunc() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
-			Params: &ast.FieldList{},
+			Results: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Type: ast.NewIdent("error"),
+					},
+				},
+			},
 		},
 		// Function body
 		Body: &ast.BlockStmt{
@@ -268,33 +327,7 @@ func (i *Implementator) loadFunc() ast.Decl {
 						},
 					},
 				},
-				// if err != nil {
-				&ast.IfStmt{
-					Cond: &ast.BinaryExpr{
-						X:  ast.NewIdent("err"),
-						Op: token.NEQ,
-						Y:  ast.NewIdent("nil"),
-					},
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							// slog.Error("loading segments failed", "err", err)
-							&ast.ExprStmt{
-								X: &ast.CallExpr{
-									Fun: &ast.SelectorExpr{
-										X:   ast.NewIdent("log"),
-										Sel: ast.NewIdent("Println"),
-									},
-									Args: []ast.Expr{
-										ast.NewIdent(`"loading store failed"`),
-										ast.NewIdent("err"),
-									},
-								},
-							},
-							// return
-							&ast.ReturnStmt{},
-						},
-					},
-				},
+				code.IfErrReturnErr(),
 				// s.segmentLock.Lock()
 				&ast.ExprStmt{
 					X: &ast.CallExpr{

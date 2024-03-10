@@ -24,6 +24,10 @@ func (i *Implementator) Name() string {
 	return "filegetter"
 }
 
+func (i *Implementator) Description() string {
+	return "Generates a function that reads a file and unmarshals it"
+}
+
 func (i *Implementator) Error() error {
 	return i.err
 }

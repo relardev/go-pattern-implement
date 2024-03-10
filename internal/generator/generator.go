@@ -32,6 +32,7 @@ type xxx {{TEXT}}
 type implementator interface {
 	Visit(node ast.Node) (bool, []ast.Decl)
 	Name() string
+	Description() string
 	Error() error
 }
 
@@ -46,11 +47,11 @@ func NewGenerator(printResult bool) *Generator {
 func (g *Generator) ListAvailableImplementators(input string) ([]string, error) {
 	fset := token.NewFileSet()
 
-	implementator := g.implementators("aaa")
+	implementators := g.implementators("aaa")
 
-	list := make([]string, 0)
+	list := make([]implementator, 0)
 
-	for _, possible := range implementator {
+	for _, possible := range implementators {
 		var parsed *ast.File
 
 		var err error
@@ -79,12 +80,18 @@ func (g *Generator) ListAvailableImplementators(input string) ([]string, error) 
 				return
 			}
 
-			list = append(list, possible.Name())
+			list = append(list, possible)
 		}
 		recoverable()
 	}
 
-	return list, nil
+	namesWithDescription := make([]string, 0, len(list))
+
+	for _, i := range list {
+		namesWithDescription = append(namesWithDescription, i.Name()+" - "+i.Description())
+	}
+
+	return namesWithDescription, nil
 }
 
 func (g *Generator) Implement(input, implementation, packageName string) {
@@ -133,7 +140,7 @@ func (g *Generator) ListAllImplementators() []string {
 	names := make([]string, 0, len(all))
 
 	for _, i := range all {
-		names = append(names, i.Name())
+		names = append(names, i.Name()+" - "+i.Description())
 	}
 
 	return names
@@ -144,7 +151,8 @@ func (g *Generator) implementators(packageName string) []implementator {
 		metrics.New(packageName, "prometheus", "prometheus"),
 		metrics.New(packageName, "statsd", "statsd"),
 		filegetter.New(packageName),
-		store.New(packageName),
+		store.New(packageName, store.PanicInNew),
+		store.New(packageName, store.ReturnErrorInNew),
 	}
 }
 
