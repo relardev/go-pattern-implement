@@ -27,6 +27,7 @@ type Implementator struct {
 	funcName      string
 	variableName  string
 	lockName      string
+	argIsContext  bool
 }
 
 func New(sourcePackageName string, panicInNew NewBehaviour) *Implementator {
@@ -75,7 +76,13 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("method should have two returns")
 			}
 
-			if len(i.methodDef.Type.(*ast.FuncType).Params.List) != 0 {
+			args := i.methodDef.Type.(*ast.FuncType).Params.List
+
+			if len(args) == 1 {
+				i.argIsContext = code.IsContext(args[0].Type)
+			}
+
+			if !(len(args) == 0 || i.argIsContext) {
 				panic("method should have no parameters")
 			}
 
@@ -90,10 +97,6 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				{
 					Name:    "repo",
 					TypeStr: field.TypeStr,
-				},
-				{
-					Name:    "interval",
-					TypeStr: "time.Duration",
 				},
 				{
 					Name:    i.lockName,
@@ -170,7 +173,7 @@ func (i *Implementator) newFunc() ast.Decl {
 		// Function body
 		Body: &ast.BlockStmt{
 			List: []ast.Stmt{
-				// s := Store{interval: interval, segmentRepo: segmentRepo}
+				// s := Store{segmentRepo: segmentRepo}
 				&ast.AssignStmt{
 					Lhs: []ast.Expr{ast.NewIdent("s")},
 					Tok: token.DEFINE,
@@ -178,10 +181,6 @@ func (i *Implementator) newFunc() ast.Decl {
 						&ast.CompositeLit{
 							Type: ast.NewIdent("Store"),
 							Elts: []ast.Expr{
-								&ast.KeyValueExpr{
-									Key:   ast.NewIdent("interval"),
-									Value: ast.NewIdent("interval"),
-								},
 								&ast.KeyValueExpr{
 									Key:   ast.NewIdent("repo"),
 									Value: ast.NewIdent("repo"),
@@ -206,12 +205,15 @@ func (i *Implementator) newFunc() ast.Decl {
 					},
 				},
 				iferr,
-				// go s.loop()
+				// go s.loop(interval)
 				&ast.GoStmt{
 					Call: &ast.CallExpr{
 						Fun: &ast.SelectorExpr{
 							X:   ast.NewIdent("s"),
 							Sel: ast.NewIdent("loop"),
+						},
+						Args: []ast.Expr{
+							ast.NewIdent("interval"),
 						},
 					},
 				},
@@ -244,7 +246,14 @@ func (i *Implementator) loopFunc() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
-			Params: &ast.FieldList{},
+			Params: &ast.FieldList{
+				List: []*ast.Field{
+					{
+						Names: []*ast.Ident{ast.NewIdent("interval")},
+						Type:  ast.NewIdent("time.Duration"),
+					},
+				},
+			},
 		},
 		// Function body
 		Body: &ast.BlockStmt{
@@ -253,7 +262,7 @@ func (i *Implementator) loopFunc() ast.Decl {
 				&ast.ForStmt{
 					Body: &ast.BlockStmt{
 						List: []ast.Stmt{
-							// time.Sleep(s.interval)
+							// time.Sleep(interval)
 							&ast.ExprStmt{
 								X: &ast.CallExpr{
 									Fun: &ast.SelectorExpr{
@@ -261,7 +270,7 @@ func (i *Implementator) loopFunc() ast.Decl {
 										Sel: ast.NewIdent("Sleep"),
 									},
 									Args: []ast.Expr{
-										ast.NewIdent("s.interval"),
+										ast.NewIdent("interval"),
 									},
 								},
 							},
@@ -284,6 +293,13 @@ func (i *Implementator) loopFunc() ast.Decl {
 }
 
 func (i *Implementator) loadFunc() ast.Decl {
+	interfaceMethodCallArg := []ast.Expr{}
+	if i.argIsContext {
+		interfaceMethodCallArg = append(
+			interfaceMethodCallArg,
+			ast.NewIdent("context.Background()"),
+		)
+	}
 	return &ast.FuncDecl{
 		Name: ast.NewIdent("load"),
 		Recv: &ast.FieldList{
@@ -324,6 +340,7 @@ func (i *Implementator) loadFunc() ast.Decl {
 								},
 								Sel: ast.NewIdent(i.funcName),
 							},
+							Args: interfaceMethodCallArg,
 						},
 					},
 				},
@@ -364,6 +381,13 @@ func (i *Implementator) loadFunc() ast.Decl {
 }
 
 func (i *Implementator) implementFunction() ast.Decl {
+	params := i.methodDef.Type.(*ast.FuncType).Params.List
+	if i.argIsContext {
+		params[0] = &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent("_")},
+			Type:  ast.NewIdent("context.Context"),
+		}
+	}
 	return &ast.FuncDecl{
 		Name: ast.NewIdent(i.funcName),
 		Recv: &ast.FieldList{
@@ -377,6 +401,7 @@ func (i *Implementator) implementFunction() ast.Decl {
 			},
 		},
 		Type: &ast.FuncType{
+			Params:  &ast.FieldList{List: params},
 			Results: i.methodDef.Type.(*ast.FuncType).Results,
 		},
 		Body: &ast.BlockStmt{

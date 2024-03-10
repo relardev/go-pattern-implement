@@ -70,3 +70,13 @@ func IfErrReturnErr(additionalReturns ...ast.Expr) *ast.IfStmt {
 		},
 	}
 }
+
+func IsContext(expr ast.Expr) bool {
+	switch t := expr.(type) {
+	case *ast.SelectorExpr:
+		x, ok := t.X.(*ast.Ident)
+		return ok && x.Name == "context" && t.Sel.Name == "Context"
+	default:
+		return false
+	}
+}
