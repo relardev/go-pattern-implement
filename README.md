@@ -17,3 +17,4 @@ Ideas:
 - [ ] Filter
 - [ ] Goroutine Channel Hinge
 - [ ] Batching
+- [ ] Throttle
