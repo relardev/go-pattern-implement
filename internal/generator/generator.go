@@ -103,7 +103,7 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	}
 
 	if err != nil {
-		log.Fatalf("None of the themplates parsed, last error: %s", err)
+		log.Fatalf("None of the templates parsed, last error: %s", err)
 	}
 
 	var visitor func(ast.Node) (bool, []ast.Decl)
