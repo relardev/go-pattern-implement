@@ -5,8 +5,8 @@ import (
 	"go/ast"
 	"go/token"
 	"log"
-	"strings"
-	"unicode/utf8"
+
+	"component-generator/internal/naming"
 )
 
 type Implementator struct {
@@ -22,6 +22,10 @@ func New(packageName string) *Implementator {
 
 func (i *Implementator) Name() string {
 	return "filegetter"
+}
+
+func (i *Implementator) Description() string {
+	return "Generates a function that reads a file and unmarshals it"
 }
 
 func (i *Implementator) Error() error {
@@ -59,7 +63,7 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 
 	returnType := returnList[0].Type
 
-	resultVarName := nameFromType(returnType)
+	resultVarName := naming.VariableNameFromExpr(returnType)
 
 	varIdent := ast.NewIdent(resultVarName)
 
@@ -295,33 +299,6 @@ func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 			},
 		},
 	}, nil
-}
-
-func nameFromType(t ast.Expr) string {
-	switch r := t.(type) {
-	case *ast.StarExpr:
-		return nameFromType(r.X)
-	case *ast.SelectorExpr:
-		return nameFromSelector(r)
-	case *ast.Ident:
-		return lowercaseFirstLetter(r.Name)
-	default:
-		return ""
-	}
-}
-
-func lowercaseFirstLetter(s string) string {
-	if s == "" {
-		return ""
-	}
-	// Get the first rune
-	r, size := utf8.DecodeRuneInString(s)
-	// Lowercase the first rune and concatenate with the rest of the string
-	return strings.ToLower(string(r)) + s[size:]
-}
-
-func nameFromSelector(sel *ast.SelectorExpr) string {
-	return lowercaseFirstLetter(sel.Sel.Name)
 }
 
 func validateReturnList(returnList []*ast.Field) error {

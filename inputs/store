@@ -1,0 +1,3 @@
+type UserGetter interface {
+	GetUser(context.Context) (domain.User, error)
+}
