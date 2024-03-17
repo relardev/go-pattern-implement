@@ -12,21 +12,30 @@ import (
 
 	filegetter "component-generator/internal/implementations/file_getter"
 	"component-generator/internal/implementations/metrics"
+	"component-generator/internal/implementations/slog"
 	"component-generator/internal/implementations/store"
 )
 
-var templates = []string{
-	`
+type template string
+
+const (
+	interfaceTempl template = `
 package whatever
 
 {{TEXT}}
 
-`,
-	`
+`
+
+	funcTypeTempl template = `
 package whatever
 
 type xxx {{TEXT}}
-`,
+`
+)
+
+var templates = []template{
+	interfaceTempl,
+	funcTypeTempl,
 }
 
 type implementator interface {
@@ -57,7 +66,7 @@ func (g *Generator) ListAvailableImplementators(input string) ([]string, error) 
 		var err error
 
 		for _, template := range templates {
-			filledTemplate := strings.Replace(template, "{{TEXT}}", input, 1)
+			filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
 			parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
 			if err == nil {
@@ -96,7 +105,7 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	var err error
 
 	for _, template := range templates {
-		filledTemplate := strings.Replace(template, "{{TEXT}}", input, 1)
+		filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
 		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
 		if err == nil {
@@ -105,7 +114,7 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	}
 
 	if err != nil {
-		log.Fatalf("None of the themplates parsed, last error: %s", err)
+		log.Fatalf("None of the templates parsed, last error: %s", err)
 	}
 
 	var visitor func(ast.Node) (bool, []ast.Decl)
@@ -148,6 +157,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 	return []implementator{
 		metrics.New(packageName, "prometheus", "prometheus"),
 		metrics.New(packageName, "statsd", "statsd"),
+		slog.New(packageName),
 		filegetter.New(packageName),
 		store.New(packageName, store.PanicInNew),
 		store.New(packageName, store.ReturnErrorInNew),
@@ -166,6 +176,7 @@ func (g *Generator) wrap(
 		if !keepGoing {
 			if g.printResult {
 				printer.Fprint(os.Stdout, token.NewFileSet(), decls)
+				fmt.Fprint(os.Stdout, "\n")
 			}
 
 			return false

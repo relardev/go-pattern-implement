@@ -1,3 +1,0 @@
-type Stdout interface {
-	Process(input string) error
-}

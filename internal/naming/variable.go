@@ -13,7 +13,7 @@ func VariableNameFromExpr(t ast.Expr) string {
 	case *ast.SelectorExpr:
 		return nameFromSelector(r)
 	case *ast.Ident:
-		return lowercaseFirstLetter(r.Name)
+		return LowercaseFirstLetter(r.Name)
 	case *ast.ArrayType:
 		return VariableNameFromExpr(r.Elt) + "s"
 	default:
@@ -21,7 +21,7 @@ func VariableNameFromExpr(t ast.Expr) string {
 	}
 }
 
-func lowercaseFirstLetter(s string) string {
+func LowercaseFirstLetter(s string) string {
 	if s == "" {
 		return ""
 	}
@@ -32,5 +32,5 @@ func lowercaseFirstLetter(s string) string {
 }
 
 func nameFromSelector(sel *ast.SelectorExpr) string {
-	return lowercaseFirstLetter(sel.Sel.Name)
+	return LowercaseFirstLetter(sel.Sel.Name)
 }
