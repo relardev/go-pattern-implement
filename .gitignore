@@ -1,2 +1,4 @@
 bin/
 component-generator
+
+test/*/result
