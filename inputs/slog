@@ -1,0 +1,6 @@
+type Stdout interface {
+	Process(input string) error
+  Add(var1 int, var2 int)
+  Save(msg domain.Message) error
+  Get(int, int) error
+}
