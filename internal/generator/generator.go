@@ -16,24 +16,24 @@ import (
 	"component-generator/internal/implementations/store"
 )
 
-type Template string
+type template string
 
 const (
-	InterfaceTempl Template = `
+	InterfaceTempl template = `
 package whatever
 
 {{TEXT}}
 
 `
 
-	FuncTypeTempl Template = `
+	FuncTypeTempl template = `
 package whatever
 
 type xxx {{TEXT}}
 `
 )
 
-var templates = []Template{
+var templates = []template{
 	InterfaceTempl,
 	FuncTypeTempl,
 }
@@ -157,7 +157,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 	return []implementator{
 		metrics.New(packageName, "prometheus", "prometheus"),
 		metrics.New(packageName, "statsd", "statsd"),
-		slog.New(packageName, "slog"),
+		slog.New(packageName),
 		filegetter.New(packageName),
 		store.New(packageName, store.PanicInNew),
 		store.New(packageName, store.ReturnErrorInNew),

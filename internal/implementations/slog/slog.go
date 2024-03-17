@@ -10,16 +10,10 @@ import (
 	"component-generator/internal/naming"
 )
 
-const SlogName = "slog"
-
 type slogFunc string
 
 const (
-	slogDebug slogFunc = "Debug"
-	slogInfo  slogFunc = "Info"
-	slogWarn  slogFunc = "Warn"
-	slogError slogFunc = "Error"
-	slogFatal slogFunc = "Fatal"
+	slogInfo slogFunc = "Info"
 )
 
 func Visitor(packageName string, fset *token.FileSet) func(node ast.Node) bool {
@@ -29,20 +23,18 @@ func Visitor(packageName string, fset *token.FileSet) func(node ast.Node) bool {
 }
 
 type Implementator struct {
-	err               error
-	packageName       string
-	implementatorName string
+	err         error
+	packageName string
 }
 
-func New(sourcePackageName, implementatorName string) *Implementator {
+func New(sourcePackageName string) *Implementator {
 	return &Implementator{
-		packageName:       sourcePackageName,
-		implementatorName: implementatorName,
+		packageName: sourcePackageName,
 	}
 }
 
 func (i *Implementator) Name() string {
-	return i.implementatorName
+	return "slog"
 }
 
 func (i *Implementator) Description() string {
@@ -185,7 +177,7 @@ func (i *Implementator) stdoutBody(
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent(SlogName),
+						X:   ast.NewIdent(i.Name()),
 						Sel: ast.NewIdent(string(slogInfo)),
 					},
 					Args: slogArgs,
