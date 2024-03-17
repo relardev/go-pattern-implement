@@ -13,6 +13,19 @@
         "--file=inputs/prometheus",
         "prometheus"
       ]
+    },
+    {
+      "type": "go",
+      "request": "launch",
+      "name": "slog",
+      "program": "main.go",
+      "showLog": true,
+      "args": [
+        "implement",
+        "--package=qqq",
+        "--file=inputs/slog",
+        "slog"
+      ]
     }
   ]
 }

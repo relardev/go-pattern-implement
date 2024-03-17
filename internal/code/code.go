@@ -1,9 +1,12 @@
 package code
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
+
+	"component-generator/internal/naming"
 )
 
 type StructField struct {
@@ -79,4 +82,46 @@ func IsContext(expr ast.Expr) bool {
 	default:
 		return false
 	}
+}
+
+func ExtractFuncArgs(field *ast.Field) []ast.Expr {
+	callArgs := []ast.Expr{}
+	usedNames := map[string]int{}
+	for _, param := range field.Type.(*ast.FuncType).Params.List {
+		var name string
+		switch n := param.Type.(type) {
+		case *ast.Ident:
+			name = "arg"
+		case *ast.StarExpr:
+			name = "arg"
+		case *ast.SelectorExpr:
+			name = naming.VariableNameFromExpr(n)
+		case *ast.ArrayType:
+			name = "arg"
+		case *ast.MapType:
+			name = "arg"
+		case *ast.FuncType:
+			name = "fn"
+		default:
+			name = "arg"
+		}
+
+		if _, ok := usedNames[name]; ok {
+			usedNames[name]++
+			name = fmt.Sprintf("%s%d", name, usedNames[name])
+		} else {
+			usedNames[name] = 1
+		}
+
+		if len(param.Names) == 0 {
+			param.Names = []*ast.Ident{ast.NewIdent(name)}
+			callArgs = append(callArgs, ast.NewIdent(name))
+		} else {
+			for _, name := range param.Names {
+				callArgs = append(callArgs, ast.NewIdent(name.Name))
+			}
+		}
+	}
+
+	return callArgs
 }
