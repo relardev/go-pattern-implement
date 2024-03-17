@@ -4,7 +4,6 @@ import (
 	"errors"
 	"go/ast"
 	"go/token"
-	"log"
 
 	"component-generator/internal/naming"
 )
@@ -39,18 +38,21 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	case *ast.FuncType:
 		err := validateReturnList(n.Results.List)
 		if err != nil {
-			log.Println(err)
+			i.err = err
 			return false, nil
 		}
 
 		generated, err := tree(n, i.packageName)
 		if err != nil {
-			log.Println(err)
+			i.err = err
 			return false, nil
 		}
 
 		decls = append(decls, generated)
 
+	case *ast.InterfaceType:
+		i.err = errors.New("filegetter doesnt work on interfaces")
+		return false, nil
 	default:
 		return true, nil
 	}
