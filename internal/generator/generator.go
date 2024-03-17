@@ -166,6 +166,7 @@ func (g *Generator) wrap(
 		if !keepGoing {
 			if g.printResult {
 				printer.Fprint(os.Stdout, token.NewFileSet(), decls)
+				fmt.Fprint(os.Stdout, "\n")
 			}
 
 			return false

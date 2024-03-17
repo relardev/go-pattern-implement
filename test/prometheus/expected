@@ -1,0 +1,75 @@
+type Repo struct {
+	r abc.Repo
+}
+
+func NewRepo(r abc.Repo) *Repo {
+	return &Repo{r: r}
+}
+func (r *Repo) Save(user user.User) error {
+	prometheus.Increment("repo_save")
+	defer prometheus.ObserveDuration("repo_save_seconds", time.Now())
+	err := r.r.Save(user)
+	if err != nil {
+		prometheus.Increment("repo_save_error")
+	}
+	return err
+}
+func (r *Repo) Update(arg UpdateParams) error {
+	prometheus.Increment("repo_update")
+	defer prometheus.ObserveDuration("repo_update_seconds", time.Now())
+	err := r.r.Update(arg)
+	if err != nil {
+		prometheus.Increment("repo_update_error")
+	}
+	return err
+}
+func (r *Repo) Get(arg string) (user.User, error) {
+	prometheus.Increment("repo_get")
+	defer prometheus.ObserveDuration("repo_get_seconds", time.Now())
+	result, err := r.r.Get(arg)
+	if err != nil {
+		prometheus.Increment("repo_get_error")
+	}
+	return result, err
+}
+func (r *Repo) GetSome(arg int, arg2 int, arg3 string) ([]user.User, error) {
+	prometheus.Increment("repo_getSome")
+	defer prometheus.ObserveDuration("repo_getSome_seconds", time.Now())
+	result, err := r.r.GetSome(arg, arg2, arg3)
+	if err != nil {
+		prometheus.Increment("repo_getSome_error")
+	}
+	return result, err
+}
+func (r *Repo) GetSome2(id, category int) ([]user.User, error) {
+	prometheus.Increment("repo_getSome2")
+	defer prometheus.ObserveDuration("repo_getSome2_seconds", time.Now())
+	result, err := r.r.GetSome2(id, category)
+	if err != nil {
+		prometheus.Increment("repo_getSome2_error")
+	}
+	return result, err
+}
+func (r *Repo) Delete(arg string) error {
+	prometheus.Increment("repo_delete")
+	defer prometheus.ObserveDuration("repo_delete_seconds", time.Now())
+	err := r.r.Delete(arg)
+	if err != nil {
+		prometheus.Increment("repo_delete_error")
+	}
+	return err
+}
+func (r *Repo) DeleteWithResult(arg string) (bool, int, error) {
+	prometheus.Increment("repo_deleteWithResult")
+	defer prometheus.ObserveDuration("repo_deleteWithResult_seconds", time.Now())
+	result1, result2, err := r.r.DeleteWithResult(arg)
+	if err != nil {
+		prometheus.Increment("repo_deleteWithResult_error")
+	}
+	return result1, result2, err
+}
+func (r *Repo) CastDelete(arg string) {
+	prometheus.Increment("repo_castDelete")
+	defer prometheus.ObserveDuration("repo_castDelete_seconds", time.Now())
+	return r.r.CastDelete(arg)
+}

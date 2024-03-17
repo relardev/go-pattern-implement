@@ -1,0 +1,10 @@
+type Repo interface {
+	Save(user.User) error
+	Update(UpdateParams) error
+	Get(string) (user.User, error)
+	GetSome(int, int, string) ([]user.User, error)
+	GetSome2(id, category int) ([]user.User, error)
+	Delete(string) error
+	DeleteWithResult(string) (bool, int, error)
+	CastDelete(string)
+}
