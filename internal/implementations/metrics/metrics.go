@@ -1,12 +1,12 @@
 package metrics
 
 import (
+	"component-generator/internal/code"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
 
-	"component-generator/internal/code"
 	naming "component-generator/internal/naming"
 )
 
