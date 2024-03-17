@@ -19,14 +19,14 @@ import (
 type template string
 
 const (
-	InterfaceTempl template = `
+	interfaceTempl template = `
 package whatever
 
 {{TEXT}}
 
 `
 
-	FuncTypeTempl template = `
+	funcTypeTempl template = `
 package whatever
 
 type xxx {{TEXT}}
@@ -34,8 +34,8 @@ type xxx {{TEXT}}
 )
 
 var templates = []template{
-	InterfaceTempl,
-	FuncTypeTempl,
+	interfaceTempl,
+	funcTypeTempl,
 }
 
 type implementator interface {

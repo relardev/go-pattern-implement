@@ -177,7 +177,7 @@ func (i *Implementator) stdoutBody(
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun: &ast.SelectorExpr{
-						X:   ast.NewIdent(i.Name()),
+						X:   ast.NewIdent("slog"),
 						Sel: ast.NewIdent(string(slogInfo)),
 					},
 					Args: slogArgs,
