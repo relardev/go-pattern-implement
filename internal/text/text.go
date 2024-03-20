@@ -7,19 +7,21 @@ import (
 	"strings"
 )
 
-func ToDecl(packageText string) (ast.Decl, error) {
+// ToDecl converts a string to a declaration
+// Warning: This function panics, use only in code that recovers
+func ToDecl(input string) ast.Decl {
 	template := `
 	package abc
 
 	{{TEXT}}
 	`
 
-	packageText = strings.Replace(template, "{{TEXT}}", packageText, 1)
+	packageText := strings.Replace(template, "{{TEXT}}", input, 1)
 
 	fset := token.NewFileSet()
 	tree, err := parser.ParseFile(fset, "", packageText, parser.ParseComments)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	var found ast.Decl
@@ -33,11 +35,16 @@ func ToDecl(packageText string) (ast.Decl, error) {
 			return true
 		}
 	})
+	if found == nil {
+		panic("decl not found")
+	}
 
-	return found, nil
+	return found
 }
 
-func ToStmts(packageText string) ([]ast.Stmt, error) {
+// ToDecl converts a string to list of statements
+// Warning: This function panics, use only in code that recovers
+func ToStmts(packageText string) []ast.Stmt {
 	stmtsTemplate := `
 	package abc
 	
@@ -45,4 +52,30 @@ func ToStmts(packageText string) ([]ast.Stmt, error) {
 		{{TEXT}}
 	}
 	`
+
+	packageText = strings.Replace(stmtsTemplate, "{{TEXT}}", packageText, 1)
+
+	fset := token.NewFileSet()
+	tree, err := parser.ParseFile(fset, "", packageText, parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+
+	var found []ast.Stmt
+
+	ast.Inspect(tree, func(node ast.Node) bool {
+		switch typedNode := node.(type) {
+		case *ast.BlockStmt:
+			found = typedNode.List
+			return false
+		default:
+			return true
+		}
+	})
+
+	if found == nil {
+		panic("stmts not found")
+	}
+
+	return found
 }
