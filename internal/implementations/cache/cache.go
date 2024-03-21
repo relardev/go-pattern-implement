@@ -2,6 +2,7 @@ package cache
 
 import (
 	"component-generator/internal/code"
+	"component-generator/internal/text"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -64,67 +65,23 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 	firstLetter := unicode.ToLower(rune(interfaceName[0]))
 
-	return &ast.FuncDecl{
-		Name: ast.NewIdent("New" + interfaceName),
-		Type: &ast.FuncType{
-			Params: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Names: []*ast.Ident{ast.NewIdent(string(firstLetter))},
-						Type: ast.NewIdent(
-							fmt.Sprintf("%s.%s", interfacePackage, interfaceName),
-						),
-					},
-					{
-						Names: []*ast.Ident{
-							ast.NewIdent("expiration"),
-							ast.NewIdent("cleanupInterval"),
-						},
-						Type: ast.NewIdent("time.Duration"),
-					},
-				},
-			},
-			Results: &ast.FieldList{
-				List: []*ast.Field{
-					{
-						Type: &ast.StarExpr{
-							X: ast.NewIdent(interfaceName),
-						},
-					},
-				},
-			},
-		},
-		Body: &ast.BlockStmt{
-			List: []ast.Stmt{
-				&ast.ReturnStmt{
-					Results: []ast.Expr{
-						&ast.UnaryExpr{
-							Op: token.AND,
-							X: &ast.CompositeLit{
-								Type: ast.NewIdent(interfaceName),
-								Elts: []ast.Expr{
-									&ast.KeyValueExpr{
-										Key:   ast.NewIdent(string(firstLetter)),
-										Value: ast.NewIdent(string(firstLetter)),
-									},
-									&ast.KeyValueExpr{
-										Key: ast.NewIdent("cache"),
-										Value: &ast.CallExpr{
-											Fun: ast.NewIdent("cache.New"),
-											Args: []ast.Expr{
-												ast.NewIdent("expiration"),
-												ast.NewIdent("cleanupInterval"),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+	wrappedName := fmt.Sprintf("%s.%s", interfacePackage, interfaceName)
+
+	template := fmt.Sprintf(`
+	func New(%s %s, expiration, cleanupInterval time.Duration) *Cache {
+		return &%s{
+			%s: %s,
+			cache: cache.New(expiration, cleanupInterval),
+		}
 	}
+	`, string(firstLetter),
+		wrappedName,
+		interfaceName,
+		string(firstLetter),
+		string(firstLetter),
+	)
+
+	return text.ToDecl(template)
 }
 
 func (i *Implementator) implementFunction(interfaceName string, field *ast.Field) ast.Decl {
@@ -137,6 +94,51 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		},
 		Results: field.Type.(*ast.FuncType).Results,
 	}
+
+	template := fmt.Sprintf(`
+func (%s *Cache) %s(%s) (%s, error) {
+        key := ""
+        cachedItem, found := %s.cache.Get(key)
+        if found {
+                %s, ok := cachedItem.(%s)
+                if !ok {
+                        return %s
+                }
+                return %s
+        }
+				%s := %s.%s.%s(%s)
+				if err != nil {
+					return nil, err
+				}
+
+				%s.cache.Set(key, %s, cache.DefaultExpiration)
+
+				return %s, nil
+			}
+}`)
+
+	// func (t *Thing) Get(arg string) (User, error) {
+	//         key := ""
+	//         cachedItem, found := t.cache.Get(key)
+	//         if found {
+	//                 recipes, ok := cachedItem.(User)
+	//                 if !ok {
+	//                         return nil, errors.New("invalid object in cache")
+	//                 }
+	//                 return recipes, nil
+	//         }
+	// 				recipes, err := t.t.Get(arg string)
+	// 				if err != nil {
+	// 					return nil, err
+	// 				}
+	//
+	// 				r.cache.Set(key, user, cache.DefaultExpiration)
+	//
+	// 				return user, nil
+	// 			}
+	// }
+
+	return text.ToDecl(template)
 
 	return &ast.FuncDecl{
 		Name: ast.NewIdent(funcName),
