@@ -1,3 +1,3 @@
 type Thing interface {
-	Get(string, int) ([]User, string, error)
+	Get(string, int) ([]*domain.User, error)
 }

@@ -135,23 +135,16 @@ func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
 			Sel: t,
 		}
 	case *ast.StarExpr:
-		switch x := t.X.(type) {
-		case *ast.Ident:
-			// add package name to the type
-			newExpr = &ast.SelectorExpr{
-				X:   ast.NewIdent(packageName),
-				Sel: x,
-			}
-		}
-
 		newExpr = &ast.StarExpr{
-			X: newExpr,
+			X: PossiblyAddPackageName(packageName, t.X),
 		}
 	case *ast.ArrayType:
 		newExpr = &ast.ArrayType{
 			Elt: PossiblyAddPackageName(packageName, t.Elt),
 		}
 
+	case *ast.SelectorExpr:
+		return t
 	default:
 		panic(fmt.Sprintf("unsupported type in PossiblyAddPackageName: %T", t))
 	}

@@ -8,6 +8,7 @@ import (
 )
 
 func VariableNameFromExpr(t ast.Expr) string {
+	fmt.Printf("VariableNameFromExpr: %T\n", t)
 	switch r := t.(type) {
 	case *ast.StarExpr:
 		return VariableNameFromExpr(r.X)
