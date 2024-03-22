@@ -1,12 +1,11 @@
 package code
 
 import (
+	"component-generator/internal/naming"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
-
-	"component-generator/internal/naming"
 )
 
 type StructField struct {
@@ -124,4 +123,46 @@ func ExtractFuncArgs(field *ast.Field) []ast.Expr {
 	}
 
 	return callArgs
+}
+
+func PossiblyAddPackageName(packageName string, field *ast.Field) *ast.Field {
+	var newType ast.Expr
+	switch t := field.Type.(type) {
+	case *ast.Ident:
+		// add package name to the type
+		newType = &ast.SelectorExpr{
+			X:   ast.NewIdent(packageName),
+			Sel: t,
+		}
+	case *ast.StarExpr:
+		switch x := t.X.(type) {
+		case *ast.Ident:
+			// add package name to the type
+			newType = &ast.SelectorExpr{
+				X:   ast.NewIdent(packageName),
+				Sel: x,
+			}
+		}
+
+		newType = &ast.StarExpr{
+			X: newType,
+		}
+	}
+
+	field.Type = newType
+
+	return field
+}
+
+func ZeroValue(t ast.Expr) ast.Expr {
+	switch t := t.(type) {
+	case *ast.StarExpr:
+		return ast.NewIdent("nil")
+	case *ast.SelectorExpr:
+		return &ast.CompositeLit{
+			Type: t,
+		}
+	default:
+		panic(fmt.Sprintf("unsupported type in Zero Value: %T", t))
+	}
 }

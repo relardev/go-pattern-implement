@@ -1,6 +1,9 @@
 package fstr
 
 import (
+	"component-generator/internal/code"
+	"fmt"
+	"go/ast"
 	"strings"
 )
 
@@ -105,9 +108,11 @@ func (l *lexer) readText() string {
 	return text
 }
 
-func Sprintf(env map[string]string, s string) string {
+func Sprintf(env map[string]any, s string) string {
 	l := newLexer(s)
 	b := strings.Builder{}
+
+	used := make(map[string]bool)
 
 Tokens:
 	for {
@@ -116,11 +121,33 @@ Tokens:
 		case TEXT:
 			b.WriteString(tok.Text)
 		case REPLACE:
-			b.WriteString(env[tok.Text])
+			val, ok := env[tok.Text]
+			if !ok {
+				panic(fmt.Errorf("missing key %s in env", tok.Text))
+			}
+			used[tok.Text] = true
+			b.WriteString(toStr(val))
 		case EOF:
 			break Tokens
 		}
 	}
 
+	if len(env) != len(used) {
+		panic(fmt.Errorf("unused keys in env"))
+	}
+
 	return b.String()
+}
+
+func toStr(val any) string {
+	switch v := val.(type) {
+	case string:
+		return v
+
+	case ast.Node, []ast.Stmt, []ast.Decl, []ast.Spec:
+		return code.NodeToString(v)
+
+	default:
+		panic(fmt.Errorf("unsupported type %T", v))
+	}
 }

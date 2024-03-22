@@ -119,7 +119,9 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		Results: &ast.FieldList{},
 	}
 
-	callArgs := code.ExtractFuncArgs(field)
+	callArgs := code.ExtractFuncArgs(
+		field,
+	)
 
 	if field.Type != nil {
 		switch n := field.Type.(type) {

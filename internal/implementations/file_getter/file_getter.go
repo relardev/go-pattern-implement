@@ -1,11 +1,11 @@
 package filegetter
 
 import (
+	"component-generator/internal/code"
+	"component-generator/internal/naming"
 	"errors"
 	"go/ast"
 	"go/token"
-
-	"component-generator/internal/naming"
 )
 
 type Implementator struct {
@@ -61,9 +61,11 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 }
 
 func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
-	returnList := possiblyAddPackageName(fn.Results.List, packageName)
+	returnList := fn.Results.List
+	packagedResult := code.PossiblyAddPackageName(packageName, returnList[0])
+	returnList[0] = packagedResult
 
-	returnType := returnList[0].Type
+	returnType := packagedResult.Type
 
 	resultVarName := naming.VariableNameFromExpr(returnType)
 
@@ -322,33 +324,4 @@ func validateReturnList(returnList []*ast.Field) error {
 	}
 
 	return nil
-}
-
-func possiblyAddPackageName(fields []*ast.Field, packageName string) []*ast.Field {
-	var newType ast.Expr
-	switch t := fields[0].Type.(type) {
-	case *ast.Ident:
-		// add package name to the type
-		newType = &ast.SelectorExpr{
-			X:   ast.NewIdent(packageName),
-			Sel: t,
-		}
-	case *ast.StarExpr:
-		switch x := t.X.(type) {
-		case *ast.Ident:
-			// add package name to the type
-			newType = &ast.SelectorExpr{
-				X:   ast.NewIdent(packageName),
-				Sel: x,
-			}
-		}
-
-		newType = &ast.StarExpr{
-			X: newType,
-		}
-	}
-
-	fields[0].Type = newType
-
-	return fields
 }

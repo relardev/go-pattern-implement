@@ -2,10 +2,11 @@ package cache
 
 import (
 	"component-generator/internal/code"
+	"component-generator/internal/fstr"
+	"component-generator/internal/naming"
 	"component-generator/internal/text"
 	"fmt"
 	"go/ast"
-	"go/token"
 	"unicode"
 )
 
@@ -85,187 +86,38 @@ func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 }
 
 func (i *Implementator) implementFunction(interfaceName string, field *ast.Field) ast.Decl {
-	firstLetter := string(unicode.ToLower(rune(interfaceName[0])))
-	funcName := field.Names[0].Name
+	result := code.PossiblyAddPackageName(i.packageName, field.Type.(*ast.FuncType).Results.List[0])
 
-	typeDef := &ast.FuncType{
-		Params: &ast.FieldList{
-			List: field.Type.(*ast.FuncType).Params.List,
-		},
-		Results: field.Type.(*ast.FuncType).Results,
+	// TODO handle unnamed args
+
+	t := fstr.Sprintf(map[string]any{
+		"firstLetter": string(unicode.ToLower(rune(interfaceName[0]))),
+		"fnName":      field.Names[0].Name,
+		"args":        field.Type.(*ast.FuncType).Params,
+		"varType":     result,
+		"varName":     naming.VariableNameFromExpr(result.Type),
+		"zeroValue":   code.ZeroValue(result.Type),
+		"varArgs":     code.ExtractFuncArgs(field),
+	}, `
+func ({{firstLetter}} *Cache) {{fnName}}({{args}}) ({{varType}}, error) {
+	key := ""
+	cachedItem, found := {{firstLetter}}.cache.Get(key)
+	if found {
+		{{varName}}, ok := cachedItem.({{varType}})
+		if !ok {
+			return {{zeroValue}}, errors.New("invalid object in cache")
+		}
+		return {{varName}}, nil
+	}
+	{{varName}} := {{firstLetter}}.{{firstLetter}}.{{fnName}}({{varArgs}})
+	if err != nil {
+		return {{zeroValue}}, err
 	}
 
-	template := fmt.Sprintf(`
-func (%s *Cache) %s(%s) (%s, error) {
-        key := ""
-        cachedItem, found := %s.cache.Get(key)
-        if found {
-                %s, ok := cachedItem.(%s)
-                if !ok {
-                        return %s
-                }
-                return %s
-        }
-				%s := %s.%s.%s(%s)
-				if err != nil {
-					return nil, err
-				}
+	{{firstLetter}}.cache.Set(key, {{varName}}, cache.DefaultExpiration)
 
-				%s.cache.Set(key, %s, cache.DefaultExpiration)
-
-				return %s, nil
-			}
+	return {{varName}}, nil
 }`)
 
-	// func (t *Thing) Get(arg string) (User, error) {
-	//         key := ""
-	//         cachedItem, found := t.cache.Get(key)
-	//         if found {
-	//                 recipes, ok := cachedItem.(User)
-	//                 if !ok {
-	//                         return nil, errors.New("invalid object in cache")
-	//                 }
-	//                 return recipes, nil
-	//         }
-	// 				recipes, err := t.t.Get(arg string)
-	// 				if err != nil {
-	// 					return nil, err
-	// 				}
-	//
-	// 				r.cache.Set(key, user, cache.DefaultExpiration)
-	//
-	// 				return user, nil
-	// 			}
-	// }
-
-	return text.ToDecl(template)
-
-	return &ast.FuncDecl{
-		Name: ast.NewIdent(funcName),
-		Type: typeDef,
-		Recv: &ast.FieldList{
-			List: []*ast.Field{
-				{
-					Names: []*ast.Ident{ast.NewIdent(firstLetter)},
-					Type: &ast.StarExpr{
-						X: ast.NewIdent(interfaceName),
-					},
-				},
-			},
-		},
-		Body: &ast.BlockStmt{
-			List: []ast.Stmt{
-				&ast.AssignStmt{
-					Lhs: []ast.Expr{
-						ast.NewIdent("key"),
-					},
-					Tok: token.DEFINE,
-					Rhs: []ast.Expr{
-						ast.NewIdent("\"\""),
-					},
-				},
-				// cachedItem, found := r.cache.Get(cacheKey)
-				&ast.AssignStmt{
-					Lhs: []ast.Expr{
-						ast.NewIdent("cachedItem"),
-						ast.NewIdent("found"),
-					},
-					Tok: token.DEFINE,
-					Rhs: []ast.Expr{
-						&ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X: &ast.SelectorExpr{
-									X:   ast.NewIdent(firstLetter),
-									Sel: ast.NewIdent("cache"),
-								},
-								Sel: ast.NewIdent("Get"),
-							},
-							Args: []ast.Expr{
-								ast.NewIdent("key"),
-							},
-						},
-					},
-				},
-				// if found { ... }
-				&ast.IfStmt{
-					Cond: ast.NewIdent("found"),
-					Body: &ast.BlockStmt{
-						List: []ast.Stmt{
-							// recipes, ok := cachedItem.([]scenario.Recipe)
-							&ast.AssignStmt{
-								Lhs: []ast.Expr{
-									ast.NewIdent("recipes"),
-									ast.NewIdent("ok"),
-								},
-								Tok: token.DEFINE,
-								Rhs: []ast.Expr{
-									&ast.TypeAssertExpr{
-										X: ast.NewIdent("cachedItem"),
-										Type: &ast.ArrayType{
-											Elt: &ast.SelectorExpr{
-												X:   ast.NewIdent("scenario"),
-												Sel: ast.NewIdent("Recipe"),
-											},
-										},
-									},
-								},
-							},
-							// if !ok { return nil, errors.New("invalid object in cache") }
-							&ast.IfStmt{
-								Cond: &ast.UnaryExpr{
-									Op: token.NOT,
-									X:  ast.NewIdent("ok"),
-								},
-								Body: &ast.BlockStmt{
-									List: []ast.Stmt{
-										&ast.ReturnStmt{
-											Results: []ast.Expr{
-												ast.NewIdent("nil"),
-												&ast.CallExpr{
-													Fun: &ast.SelectorExpr{
-														X:   ast.NewIdent("errors"),
-														Sel: ast.NewIdent("New"),
-													},
-													Args: []ast.Expr{
-														&ast.BasicLit{
-															Kind:  token.STRING,
-															Value: `"invalid object in cache"`,
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-							// return recipes, nil
-							&ast.ReturnStmt{
-								Results: []ast.Expr{
-									ast.NewIdent("recipes"),
-									ast.NewIdent("nil"),
-								},
-							},
-						},
-					},
-				},
-
-				&ast.ReturnStmt{
-					Results: []ast.Expr{
-						&ast.CallExpr{
-							Fun: &ast.SelectorExpr{
-								X:   ast.NewIdent(string(firstLetter)),
-								Sel: ast.NewIdent(funcName),
-							},
-							Args: []ast.Expr{
-								&ast.SelectorExpr{
-									X:   ast.NewIdent("cache"),
-									Sel: ast.NewIdent("Get"),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	return text.ToDecl(t)
 }
