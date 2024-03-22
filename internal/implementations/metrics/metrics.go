@@ -130,7 +130,6 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 				typeDef.Results.List = append(typeDef.Results.List, n.Results.List...)
 			}
 		default:
-			fmt.Printf("Unknown type: %T\n", n)
 			panic("Unknown type")
 		}
 	}

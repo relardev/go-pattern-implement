@@ -8,7 +8,6 @@ import (
 )
 
 func VariableNameFromExpr(t ast.Expr) string {
-	fmt.Printf("VariableNameFromExpr: %T\n", t)
 	switch r := t.(type) {
 	case *ast.StarExpr:
 		return VariableNameFromExpr(r.X)
@@ -18,8 +17,10 @@ func VariableNameFromExpr(t ast.Expr) string {
 		return LowercaseFirstLetter(r.Name)
 	case *ast.ArrayType:
 		return VariableNameFromExpr(r.Elt) + "s"
+	case *ast.MapType:
+		return VariableNameFromExpr(r.Value) + "s"
 	default:
-		panic(fmt.Sprintf("Unknown type: %T", r))
+		panic(fmt.Sprintf("Unknown type in VariableNameFromExpr: %T", r))
 	}
 }
 

@@ -129,10 +129,14 @@ func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
 	var newExpr ast.Expr
 	switch t := expr.(type) {
 	case *ast.Ident:
-		// add package name to the type
-		newExpr = &ast.SelectorExpr{
-			X:   ast.NewIdent(packageName),
-			Sel: t,
+		isFirstLetterUpper := unicode.IsUpper(rune(t.Name[0]))
+		if isFirstLetterUpper {
+			newExpr = &ast.SelectorExpr{
+				X:   ast.NewIdent(packageName),
+				Sel: t,
+			}
+		} else {
+			newExpr = t
 		}
 	case *ast.StarExpr:
 		newExpr = &ast.StarExpr{
@@ -145,6 +149,12 @@ func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
 
 	case *ast.SelectorExpr:
 		return t
+
+	case *ast.MapType:
+		newExpr = &ast.MapType{
+			Key:   PossiblyAddPackageName(packageName, t.Key),
+			Value: PossiblyAddPackageName(packageName, t.Value),
+		}
 	default:
 		panic(fmt.Sprintf("unsupported type in PossiblyAddPackageName: %T", t))
 	}

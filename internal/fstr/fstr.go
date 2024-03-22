@@ -140,15 +140,18 @@ Tokens:
 }
 
 func toStr(val any) string {
+	var result string
 	switch v := val.(type) {
 	case string:
-		return v
+		result = v
 	case rune:
-		return string(v)
+		result = string(v)
 	case ast.Node, []ast.Stmt, []ast.Decl, []ast.Spec, []ast.Expr:
-		return code.NodeToString(v)
+		result = code.NodeToString(v)
 
 	default:
 		panic(fmt.Errorf("unsupported type %T", v))
 	}
+
+	return result
 }

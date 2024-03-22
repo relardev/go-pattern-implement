@@ -80,6 +80,8 @@ func exprString(e ast.Expr) string {
 	case *ast.ArrayType:
 		return "[]" + exprString(x.Elt)
 	// Add more cases as necessary to handle different types.
+	case *ast.MapType:
+		return "map[" + exprString(x.Key) + "]" + exprString(x.Value)
 	default:
 		return fmt.Sprintf("%T", e)
 	}
