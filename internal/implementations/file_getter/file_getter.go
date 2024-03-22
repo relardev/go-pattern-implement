@@ -1,12 +1,11 @@
 package filegetter
 
 import (
+	"component-generator/internal/code"
+	"component-generator/internal/naming"
 	"errors"
 	"go/ast"
 	"go/token"
-	"log"
-
-	"component-generator/internal/naming"
 )
 
 type Implementator struct {
@@ -39,18 +38,21 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	case *ast.FuncType:
 		err := validateReturnList(n.Results.List)
 		if err != nil {
-			log.Println(err)
+			i.err = err
 			return false, nil
 		}
 
 		generated, err := tree(n, i.packageName)
 		if err != nil {
-			log.Println(err)
+			i.err = err
 			return false, nil
 		}
 
 		decls = append(decls, generated)
 
+	case *ast.InterfaceType:
+		i.err = errors.New("filegetter doesnt work on interfaces")
+		return false, nil
 	default:
 		return true, nil
 	}
@@ -59,9 +61,9 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 }
 
 func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
-	returnList := possiblyAddPackageName(fn.Results.List, packageName)
-
-	returnType := returnList[0].Type
+	returnList := fn.Results.List
+	returnType := code.PossiblyAddPackageName(packageName, returnList[0].Type)
+	returnList[0].Type = returnType
 
 	resultVarName := naming.VariableNameFromExpr(returnType)
 
@@ -310,43 +312,9 @@ func validateReturnList(returnList []*ast.Field) error {
 		return nil
 	}
 
-	secondReturn := returnList[1]
-
-	switch t := secondReturn.Type.(type) {
-	case *ast.Ident:
-		if t.Name != "error" {
-			return errors.New("second return value must be of type error")
-		}
+	if !code.IsError(returnList[1].Type) {
+		return errors.New("second return value must be of type error")
 	}
 
 	return nil
-}
-
-func possiblyAddPackageName(fields []*ast.Field, packageName string) []*ast.Field {
-	var newType ast.Expr
-	switch t := fields[0].Type.(type) {
-	case *ast.Ident:
-		// add package name to the type
-		newType = &ast.SelectorExpr{
-			X:   ast.NewIdent(packageName),
-			Sel: t,
-		}
-	case *ast.StarExpr:
-		switch x := t.X.(type) {
-		case *ast.Ident:
-			// add package name to the type
-			newType = &ast.SelectorExpr{
-				X:   ast.NewIdent(packageName),
-				Sel: x,
-			}
-		}
-
-		newType = &ast.StarExpr{
-			X: newType,
-		}
-	}
-
-	fields[0].Type = newType
-
-	return fields
 }

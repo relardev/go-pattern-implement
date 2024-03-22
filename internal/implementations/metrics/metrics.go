@@ -1,12 +1,12 @@
 package metrics
 
 import (
+	"component-generator/internal/code"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
 
-	"component-generator/internal/code"
 	naming "component-generator/internal/naming"
 )
 
@@ -119,7 +119,9 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		Results: &ast.FieldList{},
 	}
 
-	callArgs := code.ExtractFuncArgs(field)
+	callArgs := code.ExtractFuncArgs(
+		field,
+	)
 
 	if field.Type != nil {
 		switch n := field.Type.(type) {
@@ -128,7 +130,6 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 				typeDef.Results.List = append(typeDef.Results.List, n.Results.List...)
 			}
 		default:
-			fmt.Printf("Unknown type: %T\n", n)
 			panic("Unknown type")
 		}
 	}

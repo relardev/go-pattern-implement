@@ -1,0 +1,25 @@
+type Cache struct {
+	r	abc.Repo
+	cache	*cache.Cache
+}
+
+func New(r abc.Repo, expiration, cleanupInterval time.Duration) *Cache {
+	return &Cache{r: r, cache: cache.New(expiration, cleanupInterval)}
+}
+func (r *Cache) Get(ctx context.Context, arg string, arg2 int) (map[string]abc.User, error) {
+	key := "TODO"
+	cachedItem, found := r.cache.Get(key)
+	if found {
+		users, ok := cachedItem.(map[string]abc.User)
+		if !ok {
+			return nil, errors.New("invalid object in cache")
+		}
+		return users, nil
+	}
+	users := r.r.Get(ctx, arg, arg2)
+	if err != nil {
+		return nil, err
+	}
+	r.cache.Set(key, users, cache.DefaultExpiration)
+	return users, nil
+}

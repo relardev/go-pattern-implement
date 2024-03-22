@@ -1,6 +1,7 @@
 package naming
 
 import (
+	"fmt"
 	"go/ast"
 	"strings"
 	"unicode/utf8"
@@ -15,9 +16,20 @@ func VariableNameFromExpr(t ast.Expr) string {
 	case *ast.Ident:
 		return LowercaseFirstLetter(r.Name)
 	case *ast.ArrayType:
-		return VariableNameFromExpr(r.Elt) + "s"
+		name := VariableNameFromExpr(r.Elt)
+		if !strings.HasSuffix(name, "s") {
+			name += "s"
+		}
+		return name
+	case *ast.MapType:
+		name := VariableNameFromExpr(r.Value)
+		if !strings.HasSuffix(name, "s") {
+			name += "s"
+		}
+
+		return name
 	default:
-		panic("unexpected type")
+		panic(fmt.Sprintf("Unknown type in VariableNameFromExpr: %T", r))
 	}
 }
 
@@ -32,5 +44,8 @@ func LowercaseFirstLetter(s string) string {
 }
 
 func nameFromSelector(sel *ast.SelectorExpr) string {
+	if sel.Sel.Name == "Context" {
+		return "ctx"
+	}
 	return LowercaseFirstLetter(sel.Sel.Name)
 }

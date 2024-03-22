@@ -1,6 +1,10 @@
 package generator
 
 import (
+	"component-generator/internal/implementations/cache"
+	"component-generator/internal/implementations/metrics"
+	"component-generator/internal/implementations/slog"
+	"component-generator/internal/implementations/store"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,9 +15,6 @@ import (
 	"strings"
 
 	filegetter "component-generator/internal/implementations/file_getter"
-	"component-generator/internal/implementations/metrics"
-	"component-generator/internal/implementations/slog"
-	"component-generator/internal/implementations/store"
 )
 
 type template string
@@ -68,7 +69,7 @@ func (g *Generator) ListAvailableImplementators(input string) ([]string, error) 
 		for _, template := range templates {
 			filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
-			parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
+			parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, parser.ParseComments)
 			if err == nil {
 				break
 			}
@@ -107,7 +108,7 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	for _, template := range templates {
 		filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
-		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
+		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, parser.ParseComments)
 		if err == nil {
 			break
 		}
@@ -161,6 +162,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		filegetter.New(packageName),
 		store.New(packageName, store.PanicInNew),
 		store.New(packageName, store.ReturnErrorInNew),
+		cache.New(packageName),
 	}
 }
 

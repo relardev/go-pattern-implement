@@ -1,12 +1,11 @@
 package code
 
 import (
+	"component-generator/internal/naming"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
-
-	"component-generator/internal/naming"
 )
 
 type StructField struct {
@@ -124,4 +123,63 @@ func ExtractFuncArgs(field *ast.Field) []ast.Expr {
 	}
 
 	return callArgs
+}
+
+func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
+	var newExpr ast.Expr
+	switch t := expr.(type) {
+	case *ast.Ident:
+		isFirstLetterUpper := unicode.IsUpper(rune(t.Name[0]))
+		if isFirstLetterUpper {
+			newExpr = &ast.SelectorExpr{
+				X:   ast.NewIdent(packageName),
+				Sel: t,
+			}
+		} else {
+			newExpr = t
+		}
+	case *ast.StarExpr:
+		newExpr = &ast.StarExpr{
+			X: PossiblyAddPackageName(packageName, t.X),
+		}
+	case *ast.ArrayType:
+		newExpr = &ast.ArrayType{
+			Elt: PossiblyAddPackageName(packageName, t.Elt),
+		}
+
+	case *ast.SelectorExpr:
+		return t
+
+	case *ast.MapType:
+		newExpr = &ast.MapType{
+			Key:   PossiblyAddPackageName(packageName, t.Key),
+			Value: PossiblyAddPackageName(packageName, t.Value),
+		}
+	default:
+		panic(fmt.Sprintf("unsupported type in PossiblyAddPackageName: %T", t))
+	}
+
+	return newExpr
+}
+
+func ZeroValue(t ast.Expr) ast.Expr {
+	switch t := t.(type) {
+	case *ast.StarExpr, *ast.ArrayType, *ast.MapType:
+		return ast.NewIdent("nil")
+	case *ast.SelectorExpr:
+		return &ast.CompositeLit{
+			Type: t,
+		}
+	default:
+		panic(fmt.Sprintf("unsupported type in Zero Value: %T", t))
+	}
+}
+
+func IsError(t ast.Expr) bool {
+	switch t := t.(type) {
+	case *ast.Ident:
+		return t.Name == "error"
+	default:
+		return false
+	}
 }

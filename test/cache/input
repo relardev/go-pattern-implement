@@ -1,0 +1,3 @@
+type Repo interface {
+	Get(context.Context, string, int) (map[string]User, error)
+}
