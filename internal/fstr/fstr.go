@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-// tokenize this: 'hello {{name}} how are you?'
-// into this: [TEXT, REPLACE, TEXT]
-
 type tokenType int
 
 const (
