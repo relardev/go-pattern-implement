@@ -51,6 +51,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 		switch interfaceNode := typeSpec.Type.(type) {
 		case *ast.InterfaceType:
 			for _, methodDef := range interfaceNode.Methods.List {
+				validateReturnList(methodDef.Type.(*ast.FuncType).Results.List)
 				decls = append(decls, i.implementFunction(typeSpec.Name.Name, methodDef))
 			}
 		default:
@@ -61,6 +62,17 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 	}
 
 	return false, decls
+}
+
+func validateReturnList(returnList []*ast.Field) {
+	if len(returnList) != 2 {
+		panic("only methods with 2 return values are supported")
+	}
+
+	// check if last return value is error
+	if !code.IsError(returnList[1].Type) {
+		panic("last return value must be an error")
+	}
 }
 
 func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
@@ -86,12 +98,11 @@ func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
 }
 
 func (i *Implementator) implementFunction(interfaceName string, field *ast.Field) ast.Decl {
-	result := code.PossiblyAddPackageName(i.packageName, field.Type.(*ast.FuncType).Results.List[0])
-
-	// TODO handle unnamed args
+	result := field.Type.(*ast.FuncType).Results.List[0]
+	result.Type = code.PossiblyAddPackageName(i.packageName, result.Type)
 
 	t := fstr.Sprintf(map[string]any{
-		"firstLetter": string(unicode.ToLower(rune(interfaceName[0]))),
+		"firstLetter": unicode.ToLower(rune(interfaceName[0])),
 		"fnName":      field.Names[0].Name,
 		"args":        field.Type.(*ast.FuncType).Params,
 		"varType":     result,

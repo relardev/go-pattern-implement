@@ -15,6 +15,8 @@ func NodeToString(node any) string {
 		return printFuncType(n)
 	case *ast.Field:
 		return printField(n)
+	case []ast.Expr:
+		return printExprs(n)
 	case ast.Expr, ast.Stmt, ast.Decl, ast.Spec, []ast.Stmt, []ast.Decl, []ast.Spec:
 		fset := token.NewFileSet()
 
@@ -56,6 +58,15 @@ func printField(f *ast.Field) string {
 	}
 
 	return join(names, ", ") + " " + exprString(f.Type)
+}
+
+func printExprs(exprs []ast.Expr) string {
+	var exprStrs []string
+	for _, e := range exprs {
+		exprStrs = append(exprStrs, exprString(e))
+	}
+
+	return join(exprStrs, ", ")
 }
 
 func exprString(e ast.Expr) string {

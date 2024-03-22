@@ -143,8 +143,9 @@ func toStr(val any) string {
 	switch v := val.(type) {
 	case string:
 		return v
-
-	case ast.Node, []ast.Stmt, []ast.Decl, []ast.Spec:
+	case rune:
+		return string(v)
+	case ast.Node, []ast.Stmt, []ast.Decl, []ast.Spec, []ast.Expr:
 		return code.NodeToString(v)
 
 	default:

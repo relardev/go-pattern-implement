@@ -62,10 +62,8 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 
 func tree(fn *ast.FuncType, packageName string) (*ast.FuncDecl, error) {
 	returnList := fn.Results.List
-	packagedResult := code.PossiblyAddPackageName(packageName, returnList[0])
-	returnList[0] = packagedResult
-
-	returnType := packagedResult.Type
+	returnType := code.PossiblyAddPackageName(packageName, returnList[0].Type)
+	returnList[0].Type = returnType
 
 	resultVarName := naming.VariableNameFromExpr(returnType)
 
@@ -314,13 +312,8 @@ func validateReturnList(returnList []*ast.Field) error {
 		return nil
 	}
 
-	secondReturn := returnList[1]
-
-	switch t := secondReturn.Type.(type) {
-	case *ast.Ident:
-		if t.Name != "error" {
-			return errors.New("second return value must be of type error")
-		}
+	if !code.IsError(returnList[1].Type) {
+		return errors.New("second return value must be of type error")
 	}
 
 	return nil

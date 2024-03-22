@@ -1,6 +1,7 @@
 package naming
 
 import (
+	"fmt"
 	"go/ast"
 	"strings"
 	"unicode/utf8"
@@ -17,7 +18,7 @@ func VariableNameFromExpr(t ast.Expr) string {
 	case *ast.ArrayType:
 		return VariableNameFromExpr(r.Elt) + "s"
 	default:
-		panic("unexpected type")
+		panic(fmt.Sprintf("Unknown type: %T", r))
 	}
 }
 

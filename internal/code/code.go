@@ -125,12 +125,12 @@ func ExtractFuncArgs(field *ast.Field) []ast.Expr {
 	return callArgs
 }
 
-func PossiblyAddPackageName(packageName string, field *ast.Field) *ast.Field {
-	var newType ast.Expr
-	switch t := field.Type.(type) {
+func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
+	var newExpr ast.Expr
+	switch t := expr.(type) {
 	case *ast.Ident:
 		// add package name to the type
-		newType = &ast.SelectorExpr{
+		newExpr = &ast.SelectorExpr{
 			X:   ast.NewIdent(packageName),
 			Sel: t,
 		}
@@ -138,25 +138,30 @@ func PossiblyAddPackageName(packageName string, field *ast.Field) *ast.Field {
 		switch x := t.X.(type) {
 		case *ast.Ident:
 			// add package name to the type
-			newType = &ast.SelectorExpr{
+			newExpr = &ast.SelectorExpr{
 				X:   ast.NewIdent(packageName),
 				Sel: x,
 			}
 		}
 
-		newType = &ast.StarExpr{
-			X: newType,
+		newExpr = &ast.StarExpr{
+			X: newExpr,
 		}
+	case *ast.ArrayType:
+		newExpr = &ast.ArrayType{
+			Elt: PossiblyAddPackageName(packageName, t.Elt),
+		}
+
+	default:
+		panic(fmt.Sprintf("unsupported type in PossiblyAddPackageName: %T", t))
 	}
 
-	field.Type = newType
-
-	return field
+	return newExpr
 }
 
 func ZeroValue(t ast.Expr) ast.Expr {
 	switch t := t.(type) {
-	case *ast.StarExpr:
+	case *ast.StarExpr, *ast.ArrayType, *ast.MapType:
 		return ast.NewIdent("nil")
 	case *ast.SelectorExpr:
 		return &ast.CompositeLit{
@@ -164,5 +169,14 @@ func ZeroValue(t ast.Expr) ast.Expr {
 		}
 	default:
 		panic(fmt.Sprintf("unsupported type in Zero Value: %T", t))
+	}
+}
+
+func IsError(t ast.Expr) bool {
+	switch t := t.(type) {
+	case *ast.Ident:
+		return t.Name == "error"
+	default:
+		return false
 	}
 }
