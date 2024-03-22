@@ -44,5 +44,8 @@ func LowercaseFirstLetter(s string) string {
 }
 
 func nameFromSelector(sel *ast.SelectorExpr) string {
+	if sel.Sel.Name == "Context" {
+		return "ctx"
+	}
 	return LowercaseFirstLetter(sel.Sel.Name)
 }
