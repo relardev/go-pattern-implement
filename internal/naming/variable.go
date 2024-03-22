@@ -16,9 +16,18 @@ func VariableNameFromExpr(t ast.Expr) string {
 	case *ast.Ident:
 		return LowercaseFirstLetter(r.Name)
 	case *ast.ArrayType:
-		return VariableNameFromExpr(r.Elt) + "s"
+		name := VariableNameFromExpr(r.Elt)
+		if !strings.HasSuffix(name, "s") {
+			name += "s"
+		}
+		return name
 	case *ast.MapType:
-		return VariableNameFromExpr(r.Value) + "s"
+		name := VariableNameFromExpr(r.Value)
+		if !strings.HasSuffix(name, "s") {
+			name += "s"
+		}
+
+		return name
 	default:
 		panic(fmt.Sprintf("Unknown type in VariableNameFromExpr: %T", r))
 	}
