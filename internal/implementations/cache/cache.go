@@ -76,23 +76,16 @@ func validateReturnList(returnList []*ast.Field) {
 }
 
 func newWraperFunction(interfaceName, interfacePackage string) ast.Decl {
-	firstLetter := unicode.ToLower(rune(interfaceName[0]))
-
-	wrappedName := fmt.Sprintf("%s.%s", interfacePackage, interfaceName)
-
-	template := fmt.Sprintf(`
-	func New(%s %s, expiration, cleanupInterval time.Duration) *Cache {
-		return &%s{
-			%s: %s,
+	template := fstr.Sprintf(map[string]any{
+		"firstLetter":       unicode.ToLower(rune(interfaceName[0])),
+		"interfaceSelector": fmt.Sprintf("%s.%s", interfacePackage, interfaceName),
+	}, `
+	func New({{firstLetter}} {{interfaceSelector}}, expiration, cleanupInterval time.Duration) *Cache {
+		return &Cache{
+			{{firstLetter}}: {{firstLetter}},
 			cache: cache.New(expiration, cleanupInterval),
 		}
-	}
-	`, string(firstLetter),
-		wrappedName,
-		interfaceName,
-		string(firstLetter),
-		string(firstLetter),
-	)
+	}`)
 
 	return text.ToDecl(template)
 }
@@ -111,7 +104,7 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		"varArgs":     code.ExtractFuncArgs(field),
 	}, `
 func ({{firstLetter}} *Cache) {{fnName}}({{args}}) ({{varType}}, error) {
-	key := ""
+	key := "TODO"
 	cachedItem, found := {{firstLetter}}.cache.Get(key)
 	if found {
 		{{varName}}, ok := cachedItem.({{varType}})

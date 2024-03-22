@@ -69,7 +69,7 @@ func (g *Generator) ListAvailableImplementators(input string) ([]string, error) 
 		for _, template := range templates {
 			filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
-			parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
+			parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, parser.ParseComments)
 			if err == nil {
 				break
 			}
@@ -108,7 +108,7 @@ func (g *Generator) Implement(input, implementation, packageName string) {
 	for _, template := range templates {
 		filledTemplate := strings.Replace(string(template), "{{TEXT}}", input, 1)
 
-		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, 0)
+		parsed, err = parser.ParseFile(fset, "main.go", filledTemplate, parser.ParseComments)
 		if err == nil {
 			break
 		}
