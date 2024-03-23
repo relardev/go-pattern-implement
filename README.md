@@ -6,13 +6,15 @@ go run main.go --package asdf prometheus
 
 Ideas:
 - [x] Prometheus
+    1. dupa
+    1. blada
 - [x] StatsD
-- [ ] Cache
+- [x] Cache
 - [x] Store
-- [ ] Semaphore
+- [x] Semaphore
 - [ ] Errorgroup
 - [x] File getter
-- [ ] Slog
+- [x] Slog
 - [ ] Log
 - [ ] Filter
 - [ ] Goroutine Channel Hinge
