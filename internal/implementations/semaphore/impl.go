@@ -7,7 +7,7 @@ type Segment struct {
 }
 
 type SingleMaterializer interface {
-	Materialize(context.Context, segment Segment) error
+	Materialize(context.Context, Segment) error
 }
 
 type Semaphore struct {
@@ -15,7 +15,7 @@ type Semaphore struct {
 	c  chan struct{}
 }
 
-func New(sm SingleMaterializer, allowedParallelExecutions int) (*Semaphore, fun {
+func NewSM(sm SingleMaterializer, allowedParallelExecutions int) *Semaphore {
 	return &Semaphore{
 		sm: sm,
 		c:  make(chan struct{}, allowedParallelExecutions),
@@ -26,8 +26,12 @@ func (s *Semaphore) Materialize(ctx context.Context, segment Segment) error {
 	select {
 	case s.c <- struct{}{}:
 		defer func() { <-s.c }()
-		return s.sm.Materialize(segment)
+		return s.sm.Materialize(ctx, segment)
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+func (s *Semaphore) Close() {
+	close(s.c)
 }

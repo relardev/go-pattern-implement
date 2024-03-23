@@ -6,13 +6,14 @@ go run main.go --package asdf prometheus
 
 Ideas:
 - [x] Prometheus
-    1. dupa
-    1. blada
 - [x] StatsD
 - [x] Cache
 - [x] Store
 - [x] Semaphore
-- [ ] Errorgroup
+    - [ ] Basic
+    - [ ] With Cancel
+    - [ ] With Waitgroup
+    - [ ] With Waitgroup and Cancel
 - [x] File getter
 - [x] Slog
 - [ ] Log
