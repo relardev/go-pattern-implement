@@ -82,12 +82,23 @@ func (i *Implementator) newWraperFunction() ast.Decl {
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	takesContext := code.IsContext(field.Type.(*ast.FuncType).Params.List[0].Type)
 
+	results := field.Type.(*ast.FuncType).Results
+	var lastPosition int
+	var returnsError bool
+	if results != nil {
+		for j, r := range results.List {
+			results.List[j].Type = code.PossiblyAddPackageName(i.packageName, r.Type)
+		}
+		lastPosition = len(field.Type.(*ast.FuncType).Results.List) - 1
+		returnsError = code.IsError(field.Type.(*ast.FuncType).Results.List[lastPosition].Type)
+	}
+
 	commonArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":      field.Names[0].Name,
 		"args":        field.Type.(*ast.FuncType).Params,
 		"varArgs":     code.ExtractFuncArgs(field),
-		"results":     field.Type.(*ast.FuncType).Results,
+		"results":     results,
 	}
 
 	var t string
@@ -95,14 +106,6 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 		var zeroReturns []ast.Expr
 		for _, r := range field.Type.(*ast.FuncType).Results.List {
 			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
-		}
-
-		results := field.Type.(*ast.FuncType).Results
-		var lastPosition int
-		var returnsError bool
-		if results != nil {
-			lastPosition = len(field.Type.(*ast.FuncType).Results.List) - 1
-			returnsError = code.IsError(field.Type.(*ast.FuncType).Results.List[lastPosition].Type)
 		}
 
 		if returnsError {
@@ -114,7 +117,7 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 		t = fstr.Sprintf(
 			commonArgs,
 			`
-func (s *Semaphore) Materialize({{args}}) ({{results}}) {
+func (s *Semaphore) {{fnName}}({{args}}) ({{results}}) {
 	select {
 	case s.c <- struct{}{}:
 		defer func() { <-s.c }()
@@ -125,14 +128,12 @@ func (s *Semaphore) Materialize({{args}}) ({{results}}) {
 }`)
 	} else {
 		t = fstr.Sprintf(commonArgs, `
-func (s *Semaphore) Materialize({{args}}) ({{results}}) {
+func (s *Semaphore) {{fnName}}({{args}}) ({{results}}) {
 	s.c <- struct{}{} 
 	defer func() { <-s.c }()
 	return s.{{firstLetter}}.{{fnName}}({{varArgs}})
 }`)
 	}
-
-	fmt.Println(t)
 
 	return text.ToDecl(t)
 }
