@@ -10,7 +10,7 @@ Ideas:
 - [x] Cache
 - [x] Store
 - [x] Semaphore
-    - [ ] Basic
+    - [x] Basic
     - [ ] With Cancel
     - [ ] With Waitgroup
     - [ ] With Waitgroup and Cancel
