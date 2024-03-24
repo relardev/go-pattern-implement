@@ -80,36 +80,59 @@ func (i *Implementator) newWraperFunction() ast.Decl {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	hasContext := code.IsContext(field.Type.(*ast.FuncType).Params.List[0].Type)
-	result := field.Type.(*ast.FuncType).Results.List[0]
-	result.Type = code.PossiblyAddPackageName(i.packageName, result.Type)
+	takesContext := code.IsContext(field.Type.(*ast.FuncType).Params.List[0].Type)
 
-	var contextPart string
-	if hasContext {
-		contextPart = `
-	case <-ctx.Done():
-		return ctx.Err()
-`
-	}
-
-	t := fstr.Sprintf(map[string]any{
+	commonArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":      field.Names[0].Name,
 		"args":        field.Type.(*ast.FuncType).Params,
-		// "varType":     result,
-		// "varName": naming.VariableNameFromExpr(result.Type),
-		// "zeroValue":   code.ZeroValue(result.Type),
 		"varArgs":     code.ExtractFuncArgs(field),
-		"contextPart": contextPart,
-	}, `
-func (s *Semaphore) Materialize({{args}}) error {
+		"results":     field.Type.(*ast.FuncType).Results,
+	}
+
+	var t string
+	if takesContext {
+		var zeroReturns []ast.Expr
+		for _, r := range field.Type.(*ast.FuncType).Results.List {
+			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
+		}
+
+		results := field.Type.(*ast.FuncType).Results
+		var lastPosition int
+		var returnsError bool
+		if results != nil {
+			lastPosition = len(field.Type.(*ast.FuncType).Results.List) - 1
+			returnsError = code.IsError(field.Type.(*ast.FuncType).Results.List[lastPosition].Type)
+		}
+
+		if returnsError {
+			zeroReturns[lastPosition] = text.ToExpr("ctx.Err()")
+		}
+
+		commonArgs["zeroReturns"] = zeroReturns
+
+		t = fstr.Sprintf(
+			commonArgs,
+			`
+func (s *Semaphore) Materialize({{args}}) ({{results}}) {
 	select {
 	case s.c <- struct{}{}:
 		defer func() { <-s.c }()
 		return s.{{firstLetter}}.{{fnName}}({{varArgs}})
-	{{contextPart}}
+	case <-ctx.Done():
+		return {{zeroReturns}}
 	}
 }`)
+	} else {
+		t = fstr.Sprintf(commonArgs, `
+func (s *Semaphore) Materialize({{args}}) ({{results}}) {
+	s.c <- struct{}{} 
+	defer func() { <-s.c }()
+	return s.{{firstLetter}}.{{fnName}}({{varArgs}})
+}`)
+	}
+
+	fmt.Println(t)
 
 	return text.ToDecl(t)
 }

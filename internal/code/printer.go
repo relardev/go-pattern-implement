@@ -34,7 +34,10 @@ func NodeToString(node any) string {
 func printFuncType(fl *ast.FieldList) string {
 	var params []string
 
-	// Process parameters.
+	if fl == nil {
+		return ""
+	}
+
 	for _, p := range fl.List {
 		var typeNameBuf bytes.Buffer
 		for _, n := range p.Names {
@@ -79,11 +82,17 @@ func exprString(e ast.Expr) string {
 		return "*" + exprString(x.X)
 	case *ast.ArrayType:
 		return "[]" + exprString(x.Elt)
-	// Add more cases as necessary to handle different types.
 	case *ast.MapType:
 		return "map[" + exprString(x.Key) + "]" + exprString(x.Value)
+	case *ast.CompositeLit:
+		return fmt.Sprintf("%s{%s}", exprString(x.Type), printExprs(x.Elts))
+	case *ast.CallExpr:
+		return fmt.Sprintf("%s(%s)", exprString(x.Fun), printExprs(x.Args))
 	default:
-		return fmt.Sprintf("%T", e)
+		// this might blow up? before it was the return below but not sure
+		// if it was important
+		// return fmt.Sprintf("%T", e)
+		panic(fmt.Sprintf("unsupported type in exprString: %T", e))
 	}
 }
 

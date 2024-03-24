@@ -170,6 +170,32 @@ func ZeroValue(t ast.Expr) ast.Expr {
 		return &ast.CompositeLit{
 			Type: t,
 		}
+	case *ast.Ident:
+		switch t.Name {
+		case "error":
+			return ast.NewIdent("nil")
+		case "string":
+			return &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: "\"\"",
+			}
+		case "int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64":
+			return &ast.BasicLit{
+				Kind:  token.INT,
+				Value: "0",
+			}
+		case "float32", "float64":
+			return &ast.BasicLit{
+				Kind:  token.FLOAT,
+				Value: "0.0",
+			}
+		case "bool":
+			return ast.NewIdent("false")
+		default:
+			return &ast.CompositeLit{
+				Type: t,
+			}
+		}
 	default:
 		panic(fmt.Sprintf("unsupported type in Zero Value: %T", t))
 	}

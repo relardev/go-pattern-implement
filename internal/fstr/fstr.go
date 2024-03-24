@@ -151,7 +151,6 @@ func toStr(val any) string {
 		result = string(v)
 	case ast.Node, []ast.Stmt, []ast.Decl, []ast.Spec, []ast.Expr:
 		result = code.NodeToString(v)
-
 	default:
 		panic(fmt.Errorf("unsupported type %T", v))
 	}
