@@ -1,0 +1,44 @@
+type Semaphore struct {
+	r	abc.Repo
+	c	chan struct{}
+}
+
+func New(r abc.Repo, allowedParallelExecutions int) *Semaphore {
+	return &Semaphore{r: r, c: make(chan struct{}, allowedParallelExecutions)}
+}
+func (s *Semaphore) Set(arg int) {
+	s.c <- struct{}{}
+	defer func() {
+		<-s.c
+	}()
+	return s.r.Set(arg)
+}
+func (s *Semaphore) Get(arg string, arg2 int) (map[string]abc.User, error) {
+	s.c <- struct{}{}
+	defer func() {
+		<-s.c
+	}()
+	return s.r.Get(arg, arg2)
+}
+func (s *Semaphore) GetCtx(ctx context.Context, a string, b int) (abc.User, error) {
+	select {
+	case s.c <- struct{}{}:
+		defer func() {
+			<-s.c
+		}()
+		return s.r.GetCtx(ctx, a, b)
+	case <-ctx.Done():
+		return abc.User{}, ctx.Err()
+	}
+}
+func (s *Semaphore) GetCtxNoErr(ctx context.Context, a string, b int) model.User {
+	select {
+	case s.c <- struct{}{}:
+		defer func() {
+			<-s.c
+		}()
+		return s.r.GetCtxNoErr(ctx, a, b)
+	case <-ctx.Done():
+		return model.User{}
+	}
+}

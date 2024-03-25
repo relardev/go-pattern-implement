@@ -79,3 +79,36 @@ func ToStmts(packageText string) []ast.Stmt {
 
 	return found
 }
+
+func ToExpr(input string) ast.Expr {
+	template := `
+	package abc
+
+	var _ = {{TEXT}}
+	`
+
+	packageText := strings.Replace(template, "{{TEXT}}", input, 1)
+
+	fset := token.NewFileSet()
+	tree, err := parser.ParseFile(fset, "", packageText, parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+
+	var found ast.Expr
+
+	ast.Inspect(tree, func(node ast.Node) bool {
+		switch typedNode := node.(type) {
+		case ast.Expr:
+			found = typedNode
+			return false
+		default:
+			return true
+		}
+	})
+	if found == nil {
+		panic("expr not found")
+	}
+
+	return found
+}

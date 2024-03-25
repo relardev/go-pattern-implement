@@ -27,3 +27,17 @@ if [ $? -ne 0 ]; then
     echo "$diff_output"
     exit 1
 fi
+
+cat test/semaphore/input | ./bin/go-component-generator implement --package abc semaphore > test/semaphore/result
+# cat test/semaphore/input | ./bin/go-component-generator implement --package abc semaphore > test/semaphore/expected
+
+result="test/semaphore/result"
+expected="test/semaphore/expected"
+
+diff_output=$(diff "$result" "$expected")
+
+if [ $? -ne 0 ]; then
+    echo "result is different from expected: $result vs $expected"
+    echo "$diff_output"
+    exit 1
+fi

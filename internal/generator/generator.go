@@ -3,6 +3,7 @@ package generator
 import (
 	"component-generator/internal/implementations/cache"
 	"component-generator/internal/implementations/metrics"
+	"component-generator/internal/implementations/semaphore"
 	"component-generator/internal/implementations/slog"
 	"component-generator/internal/implementations/store"
 	"fmt"
@@ -163,6 +164,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		store.New(packageName, store.PanicInNew),
 		store.New(packageName, store.ReturnErrorInNew),
 		cache.New(packageName),
+		semaphore.New(packageName),
 	}
 }
 

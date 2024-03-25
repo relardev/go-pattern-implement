@@ -7,12 +7,15 @@ go run main.go --package asdf prometheus
 Ideas:
 - [x] Prometheus
 - [x] StatsD
-- [ ] Cache
+- [x] Cache
 - [x] Store
-- [ ] Semaphore
-- [ ] Errorgroup
+- [x] Semaphore
+    - [x] Basic
+    - [ ] With Cancel
+    - [ ] With Waitgroup
+    - [ ] With Waitgroup and Cancel
 - [x] File getter
-- [ ] Slog
+- [x] Slog
 - [ ] Log
 - [ ] Filter
 - [ ] Goroutine Channel Hinge

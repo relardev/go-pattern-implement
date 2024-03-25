@@ -1,0 +1,6 @@
+type Repo interface {
+	Set(int) 
+	Get(string, int) (map[string]User, error)
+	GetCtx(ctx context.Context, a string, b int) (User, error)
+	GetCtxNoErr(ctx context.Context, a string, b int) model.User
+}
