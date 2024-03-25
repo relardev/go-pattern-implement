@@ -6,6 +6,7 @@ import (
 	"component-generator/internal/implementations/semaphore"
 	"component-generator/internal/implementations/slog"
 	"component-generator/internal/implementations/store"
+	"component-generator/internal/implementations/throttle"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -165,6 +166,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		store.New(packageName, store.ReturnErrorInNew),
 		cache.New(packageName),
 		semaphore.New(packageName),
+		throttle.New(packageName),
 	}
 }
 
