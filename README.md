@@ -22,4 +22,5 @@ Ideas:
 - [ ] Batching
 - [ ] Throttle
     - [x] Error
+    - [ ] No error
 - [ ] Retry
