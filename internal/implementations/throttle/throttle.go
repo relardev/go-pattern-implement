@@ -108,13 +108,13 @@ func ({{firstLetter}} *Throttle) resetCounter() {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	returnsError, errorPos := code.DoesReturnError(field)
 	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
 	var zeroReturns []ast.Expr
 	if results != nil {
 		for _, r := range field.Type.(*ast.FuncType).Results.List {
 			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
 		}
+		returnsError, errorPos := code.DoesReturnError(field)
 		if returnsError {
 			zeroReturns[errorPos] = text.ToExpr("errors.New(\"rate limit exceeded\")")
 		}
