@@ -22,7 +22,7 @@ func New(sourcePackageName string) *Implementator {
 }
 
 func (i *Implementator) Name() string {
-	return "throttle"
+	return "throttle-error"
 }
 
 func (i *Implementator) Description() string {
@@ -108,29 +108,55 @@ func ({{firstLetter}} *Throttle) resetCounter() {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	_, _ = code.DoesReturnError(field)
-	results := field.Type.(*ast.FuncType).Results
+	returnsError, errorPos := code.DoesReturnError(field)
+	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
+	var zeroReturns []ast.Expr
 	if results != nil {
-		for j, r := range results.List {
-			results.List[j].Type = code.PossiblyAddPackageName(i.packageName, r.Type)
+		for _, r := range field.Type.(*ast.FuncType).Results.List {
+			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
 		}
+		if returnsError {
+			zeroReturns[errorPos] = text.ToExpr("errors.New(\"rate limit exceeded\")")
+		}
+	}
+
+	returnPartArgs := map[string]any{
+		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
+		"fnName":      field.Names[0].Name,
+		"varArgs":     code.ExtractFuncArgs(field),
+	}
+
+	var returnPart string
+	if results != nil {
+		returnPart = fstr.Sprintf(
+			returnPartArgs,
+			"return {{firstLetter}}.{{fnName}}({{varArgs}})",
+		)
+	} else {
+		returnPart = fstr.Sprintf(
+			returnPartArgs,
+			`{{firstLetter}}.{{fnName}}({{varArgs}})
+	return`,
+		)
 	}
 
 	t := fstr.Sprintf(map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":      field.Names[0].Name,
 		"args":        field.Type.(*ast.FuncType).Params,
-		"varArgs":     code.ExtractFuncArgs(field),
 		"results":     results,
+		"zeroReturns": zeroReturns,
+		"returnPart":  returnPart,
 	}, `
 func ({{firstLetter}} *Throttle) {{fnName}}({{args}}) ({{results}}) {
 	{{firstLetter}}.mu.Lock()
-	defer {{firstLetter}}.mu.Unlock()
 	if {{firstLetter}}.alreadyCalled {
-		return errors.New("rate limit exceeded")
+		{{firstLetter}}.mu.Unlock()
+		return {{zeroReturns}}
 	}
 	{{firstLetter}}.alreadyCalled = true
-	return {{firstLetter}}.{{fnName}}({{varArgs}})
+	{{firstLetter}}.mu.Unlock()
+	{{returnPart}}
 }`)
 
 	return text.ToDecl(t)
