@@ -108,6 +108,7 @@ func ({{firstLetter}} *Throttle) resetCounter() {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
+	_, _ = code.DoesReturnError(field)
 	results := field.Type.(*ast.FuncType).Results
 	if results != nil {
 		for j, r := range results.List {
