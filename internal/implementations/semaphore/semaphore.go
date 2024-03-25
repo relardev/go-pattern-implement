@@ -82,16 +82,7 @@ func (i *Implementator) newWraperFunction() ast.Decl {
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	takesContext := code.IsContext(field.Type.(*ast.FuncType).Params.List[0].Type)
 
-	results := field.Type.(*ast.FuncType).Results
-	var lastPosition int
-	var returnsError bool
-	if results != nil {
-		for j, r := range results.List {
-			results.List[j].Type = code.PossiblyAddPackageName(i.packageName, r.Type)
-		}
-		lastPosition = len(field.Type.(*ast.FuncType).Results.List) - 1
-		returnsError = code.IsError(field.Type.(*ast.FuncType).Results.List[lastPosition].Type)
-	}
+	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
 
 	commonArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
@@ -108,8 +99,9 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
 		}
 
+		returnsError, errorPos := code.DoesReturnError(field)
 		if returnsError {
-			zeroReturns[lastPosition] = text.ToExpr("ctx.Err()")
+			zeroReturns[errorPos] = text.ToExpr("ctx.Err()")
 		}
 
 		commonArgs["zeroReturns"] = zeroReturns

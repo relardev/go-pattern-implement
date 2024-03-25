@@ -9,7 +9,7 @@ Ideas:
 - [x] StatsD
 - [x] Cache
 - [x] Store
-- [x] Semaphore
+- [ ] Semaphore
     - [x] Basic
     - [ ] With Cancel
     - [ ] With Waitgroup
@@ -21,3 +21,6 @@ Ideas:
 - [ ] Goroutine Channel Hinge
 - [ ] Batching
 - [ ] Throttle
+    - [x] Error
+    - [ ] No error
+- [ ] Retry

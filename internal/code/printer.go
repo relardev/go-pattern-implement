@@ -88,6 +88,8 @@ func exprString(e ast.Expr) string {
 		return fmt.Sprintf("%s{%s}", exprString(x.Type), printExprs(x.Elts))
 	case *ast.CallExpr:
 		return fmt.Sprintf("%s(%s)", exprString(x.Fun), printExprs(x.Args))
+	case *ast.BasicLit:
+		return x.Value
 	default:
 		// this might blow up? before it was the return below but not sure
 		// if it was important

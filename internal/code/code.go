@@ -125,6 +125,18 @@ func ExtractFuncArgs(field *ast.Field) []ast.Expr {
 	return callArgs
 }
 
+func AddPackageNameToResults(results *ast.FieldList, packageName string) *ast.FieldList {
+	if results == nil {
+		return nil
+	}
+
+	for _, r := range results.List {
+		r.Type = PossiblyAddPackageName(packageName, r.Type)
+	}
+
+	return results
+}
+
 func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
 	var newExpr ast.Expr
 	switch t := expr.(type) {
@@ -208,4 +220,14 @@ func IsError(t ast.Expr) bool {
 	default:
 		return false
 	}
+}
+
+// DoesReturnError returns true if the last return value of the function is an error
+func DoesReturnError(field *ast.Field) (bool, int) {
+	results := field.Type.(*ast.FuncType).Results
+	if results == nil {
+		return false, 0
+	}
+	lastPosition := len(results.List) - 1
+	return IsError(results.List[lastPosition].Type), lastPosition
 }
