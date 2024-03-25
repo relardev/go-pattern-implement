@@ -20,4 +20,6 @@ Ideas:
 - [ ] Filter
 - [ ] Goroutine Channel Hinge
 - [ ] Batching
-- [x] Throttle
+- [ ] Throttle
+    - [x] Error
+- [ ] Retry

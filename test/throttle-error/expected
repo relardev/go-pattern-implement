@@ -1,0 +1,50 @@
+type Throttle struct {
+	p		abc.Processor
+	ticker		*time.Ticker
+	mu		sync.Mutex
+	alreadyCalled	bool
+}
+
+func New(p abc.Processor, passesPerSecond int) *Throttle {
+	throttle := &Throttle{p: p, ticker: time.NewTicker(time.Second / time.Duration(passesPerSecond))}
+	go throttle.resetCounter()
+	return throttle
+}
+func (p *Throttle) resetCounter() {
+	for range p.ticker.C {
+		p.mu.Lock()
+		p.alreadyCalled = false
+		p.mu.Unlock()
+	}
+}
+func (p *Throttle) Process0(arg string, arg2 int) error {
+	p.mu.Lock()
+	if p.alreadyCalled {
+		p.mu.Unlock()
+		return errors.New("rate limit exceeded")
+	}
+	p.alreadyCalled = true
+	p.mu.Unlock()
+	return p.Process0(arg, arg2)
+}
+func (p *Throttle) Process1(user User) {
+	p.mu.Lock()
+	if p.alreadyCalled {
+		p.mu.Unlock()
+		return
+	}
+	p.alreadyCalled = true
+	p.mu.Unlock()
+	p.Process1(user)
+	return
+}
+func (p *Throttle) Process2(user model.User, a string) (int, error) {
+	p.mu.Lock()
+	if p.alreadyCalled {
+		p.mu.Unlock()
+		return 0, errors.New("rate limit exceeded")
+	}
+	p.alreadyCalled = true
+	p.mu.Unlock()
+	return p.Process2(user, a)
+}
