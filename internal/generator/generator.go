@@ -166,7 +166,8 @@ func (g *Generator) implementators(packageName string) []implementator {
 		store.New(packageName, store.ReturnErrorInNew),
 		cache.New(packageName),
 		semaphore.New(packageName),
-		throttle.New(packageName),
+		throttle.New(packageName, throttle.ModeNoError),
+		throttle.New(packageName, throttle.ModeWithError),
 	}
 }
 

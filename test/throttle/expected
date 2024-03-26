@@ -1,0 +1,40 @@
+type Throttle struct {
+	r		abc.Repo
+	ticker		*time.Ticker
+	mu		sync.Mutex
+	alreadyCalled	bool
+}
+
+func New(r abc.Repo, passesPerSecond int) *Throttle {
+	throttle := &Throttle{r: r, ticker: time.NewTicker(time.Second / time.Duration(passesPerSecond))}
+	go throttle.resetCounter()
+	return throttle
+}
+func (r *Throttle) resetCounter() {
+	for range p.ticker.C {
+		p.mu.Lock()
+		p.alreadyCalled = false
+		p.mu.Unlock()
+	}
+}
+func (r *Throttle) Set(arg string, arg2 int) error {
+	r.mu.Lock()
+	if r.alreadyCalled {
+		r.mu.Unlock()
+		return nil
+	}
+	r.alreadyCalled = true
+	r.mu.Unlock()
+	return r.Set(arg, arg2)
+}
+func (r *Throttle) SetUser(user User) {
+	r.mu.Lock()
+	if r.alreadyCalled {
+		r.mu.Unlock()
+		return
+	}
+	r.alreadyCalled = true
+	r.mu.Unlock()
+	r.SetUser(user)
+	return
+}

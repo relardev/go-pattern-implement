@@ -222,9 +222,14 @@ func IsError(t ast.Expr) bool {
 	}
 }
 
-// DoesReturnError returns true if the last return value of the function is an error
-func DoesReturnError(field *ast.Field) (bool, int) {
+// DoesFieldReturnError returns true if the last return value of the function is an error
+func DoesFieldReturnError(field *ast.Field) (bool, int) {
 	results := field.Type.(*ast.FuncType).Results
+	return DoesFieldListReturnError(results)
+}
+
+// DoesFieldListtReturnError returns true if the last field in a FieldList is an error
+func DoesFieldListReturnError(results *ast.FieldList) (bool, int) {
 	if results == nil {
 		return false, 0
 	}

@@ -9,24 +9,41 @@ import (
 	"unicode"
 )
 
+type Mode int
+
+const (
+	ModeNoError Mode = iota
+	ModeWithError
+)
+
 type Implementator struct {
 	err           error
 	packageName   string
 	interfaceName string
+	mode          Mode
 }
 
-func New(sourcePackageName string) *Implementator {
+func New(sourcePackageName string, m Mode) *Implementator {
 	return &Implementator{
 		packageName: sourcePackageName,
+		mode:        m,
 	}
 }
 
 func (i *Implementator) Name() string {
+	if i.mode == ModeNoError {
+		return "throttle"
+	}
+
 	return "throttle-error"
 }
 
 func (i *Implementator) Description() string {
-	return "Process at most n requests per second"
+	if i.mode == ModeNoError {
+		return "Process at most n requests per second, on throttled call return no error"
+	}
+
+	return "Process at most n requests per second, on throttled call return an error"
 }
 
 func (i *Implementator) Error() error {
@@ -61,6 +78,10 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 		switch interfaceNode := typeSpec.Type.(type) {
 		case *ast.InterfaceType:
 			for _, methodDef := range interfaceNode.Methods.List {
+				if i.mode == ModeNoError {
+					validateNoError(methodDef)
+				}
+
 				decls = append(decls, i.implementFunction(methodDef))
 			}
 		default:
@@ -109,16 +130,8 @@ func ({{firstLetter}} *Throttle) resetCounter() {
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
-	var zeroReturns []ast.Expr
-	if results != nil {
-		for _, r := range field.Type.(*ast.FuncType).Results.List {
-			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
-		}
-		returnsError, errorPos := code.DoesReturnError(field)
-		if returnsError {
-			zeroReturns[errorPos] = text.ToExpr("errors.New(\"rate limit exceeded\")")
-		}
-	}
+
+	zeroReturns := i.getThrottledReturn(results)
 
 	returnPartArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
@@ -160,4 +173,47 @@ func ({{firstLetter}} *Throttle) {{fnName}}({{args}}) ({{results}}) {
 }`)
 
 	return text.ToDecl(t)
+}
+
+func (i *Implementator) getThrottledReturn(results *ast.FieldList) []ast.Expr {
+	if results == nil {
+		return nil
+	}
+
+	if i.mode == ModeNoError {
+		// only possible return can be an error
+		return []ast.Expr{
+			ast.NewIdent("nil"),
+		}
+	}
+
+	zeroReturns := []ast.Expr{}
+
+	for _, r := range results.List {
+		zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
+	}
+
+	returnsError, errorPos := code.DoesFieldListReturnError(results)
+	if returnsError {
+		zeroReturns[errorPos] = text.ToExpr("errors.New(\"rate limit exceeded\")")
+	}
+
+	return zeroReturns
+}
+
+func validateNoError(field *ast.Field) {
+	returns := field.Type.(*ast.FuncType).Results
+	if returns == nil || len(returns.List) == 0 {
+		return
+	}
+
+	if len(returns.List) == 1 {
+		if !code.IsError(returns.List[0].Type) {
+			panic("expected error as the only return value")
+		}
+
+		return
+	}
+
+	panic("expected 1 or 0 return values")
 }

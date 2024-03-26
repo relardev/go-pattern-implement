@@ -99,7 +99,7 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 			zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
 		}
 
-		returnsError, errorPos := code.DoesReturnError(field)
+		returnsError, errorPos := code.DoesFieldReturnError(field)
 		if returnsError {
 			zeroReturns[errorPos] = text.ToExpr("ctx.Err()")
 		}
