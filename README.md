@@ -5,8 +5,9 @@ go run main.go --package asdf prometheus
 ```
 
 Ideas:
-- [x] Prometheus
-- [x] StatsD
+- [x] metrics
+    -  Prometheus
+    -  StatsD
 - [x] Cache
 - [x] Store
 - [ ] Semaphore
@@ -17,10 +18,10 @@ Ideas:
 - [x] File getter
 - [x] Slog
 - [ ] Log
-- [ ] Filter
+- [x] Filter
 - [ ] Goroutine Channel Hinge
 - [ ] Batching
-- [ ] Throttle
-    - [x] Error
-    - [ ] No error
+- [x] Throttle
+    -  Error
+    -  No error
 - [ ] Retry

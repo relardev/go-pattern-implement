@@ -236,3 +236,15 @@ func DoesFieldListReturnError(results *ast.FieldList) (bool, int) {
 	lastPosition := len(results.List) - 1
 	return IsError(results.List[lastPosition].Type), lastPosition
 }
+
+func RemoveNames(fl *ast.FieldList) *ast.FieldList {
+	flCopy := &ast.FieldList{
+		List: make([]*ast.Field, len(fl.List)),
+	}
+	for i, f := range fl.List {
+		flCopy.List[i] = &ast.Field{
+			Type: f.Type,
+		}
+	}
+	return flCopy
+}
