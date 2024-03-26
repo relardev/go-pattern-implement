@@ -62,7 +62,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("expected exactly one method")
 			}
 			methodDef := interfaceNode.Methods.List[0]
-			validateNoError(methodDef)
+			validate(methodDef)
 
 			filterFuncsSignature := text.ToExpr(fstr.Sprintf(map[string]any{
 				"params": code.RemoveNames(methodDef.Type.(*ast.FuncType).Params),
@@ -178,7 +178,7 @@ func (i *Implementator) getThrottledReturn(results *ast.FieldList) []ast.Expr {
 	return zeroReturns
 }
 
-func validateNoError(field *ast.Field) {
+func validate(field *ast.Field) {
 	returns := field.Type.(*ast.FuncType).Results
 	if returns == nil || len(returns.List) == 0 {
 		return
