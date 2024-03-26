@@ -2,6 +2,7 @@ package generator
 
 import (
 	"component-generator/internal/implementations/cache"
+	"component-generator/internal/implementations/filter"
 	"component-generator/internal/implementations/metrics"
 	"component-generator/internal/implementations/semaphore"
 	"component-generator/internal/implementations/slog"
@@ -168,6 +169,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		semaphore.New(packageName),
 		throttle.New(packageName, throttle.ModeNoError),
 		throttle.New(packageName, throttle.ModeWithError),
+		filter.New(packageName, filter.ModeWithError),
 	}
 }
 
