@@ -170,6 +170,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		throttle.New(packageName, throttle.ModeNoError),
 		throttle.New(packageName, throttle.ModeWithError),
 		filter.New(packageName, filter.ModeWithError),
+		filter.New(packageName, filter.ModeNoError),
 	}
 }
 

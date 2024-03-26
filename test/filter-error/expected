@@ -1,0 +1,16 @@
+type Filter struct {
+	p	abc.Processor
+	filters	[]func(domain.User) bool
+}
+
+func New(p abc.Processor, filters []func(domain.User) bool) *Filter {
+	return &Filter{p: p, filters: filters}
+}
+func (p *Filter) Process(user domain.User) error {
+	for _, filter := range p.filters {
+		if !filter(user) {
+			return errors.New("filtered")
+		}
+	}
+	return p.Process(user)
+}

@@ -62,7 +62,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("expected exactly one method")
 			}
 			methodDef := interfaceNode.Methods.List[0]
-			validate(methodDef)
+			i.validate(methodDef)
 
 			filterFuncsSignature := text.ToExpr(fstr.Sprintf(map[string]any{
 				"params": code.RemoveNames(methodDef.Type.(*ast.FuncType).Params),
@@ -109,7 +109,7 @@ func (i *Implementator) newWraperFunction(filtersSigature ast.Expr) ast.Decl {
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
 
-	zeroReturns := i.getThrottledReturn(results)
+	zeroReturns := i.getReturns(results)
 
 	returnPartArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
@@ -152,7 +152,7 @@ func ({{firstLetter}} *Filter) {{fnName}}({{args}}) ({{results}}) {
 	return text.ToDecl(t)
 }
 
-func (i *Implementator) getThrottledReturn(results *ast.FieldList) []ast.Expr {
+func (i *Implementator) getReturns(results *ast.FieldList) []ast.Expr {
 	if results == nil {
 		return nil
 	}
@@ -164,22 +164,19 @@ func (i *Implementator) getThrottledReturn(results *ast.FieldList) []ast.Expr {
 		}
 	}
 
-	zeroReturns := []ast.Expr{}
-
-	for _, r := range results.List {
-		zeroReturns = append(zeroReturns, code.ZeroValue(r.Type))
+	return []ast.Expr{
+		text.ToExpr("errors.New(\"filtered\")"),
 	}
-
-	returnsError, errorPos := code.DoesFieldListReturnError(results)
-	if returnsError {
-		zeroReturns[errorPos] = text.ToExpr("errors.New(\"filtered\")")
-	}
-
-	return zeroReturns
 }
 
-func validate(field *ast.Field) {
+func (i *Implementator) validate(field *ast.Field) {
 	returns := field.Type.(*ast.FuncType).Results
+	if i.mode == ModeWithError {
+		if returns == nil || len(returns.List) != 1 || !code.IsError(returns.List[0].Type) {
+			panic("expected error as the only return value")
+		}
+		return
+	}
 	if returns == nil || len(returns.List) == 0 {
 		return
 	}
