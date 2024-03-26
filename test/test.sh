@@ -1,9 +1,9 @@
 #!/bin/bash
 
-tests="prometheus cache semaphore throttle-error"
+tests="prometheus cache semaphore throttle-error throttle"
 
 for test_name in $tests; do
-    echo "Running test: $test_name"
+    echo "Testing: $test_name"
     cat test/$test_name/input | ./bin/go-component-generator implement --package abc $test_name > test/$test_name/result
 
     result="test/$test_name/result"

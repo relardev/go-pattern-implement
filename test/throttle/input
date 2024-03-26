@@ -1,0 +1,4 @@
+type Repo interface {
+	Set(string, int) error
+	SetUser(user User)
+}

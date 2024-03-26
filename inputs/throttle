@@ -1,5 +1,5 @@
 type Processor interface {
 	Process0(string, int) error
 	Process1(user User)
-	Process2(user model.User, a string) (int, error)
+	Process2(user model.User, a string) error
 }
