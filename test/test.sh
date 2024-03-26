@@ -1,6 +1,6 @@
 #!/bin/bash
 
-tests="prometheus cache semaphore throttle-error throttle"
+tests="prometheus cache semaphore throttle-error throttle filter filter-error"
 
 for test_name in $tests; do
     echo "Testing: $test_name"
