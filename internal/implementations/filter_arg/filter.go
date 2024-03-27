@@ -1,4 +1,4 @@
-package filterreturn
+package filterarg
 
 import (
 	"component-generator/internal/code"
@@ -14,6 +14,7 @@ type Implementator struct {
 	err           error
 	packageName   string
 	interfaceName string
+	addContext    bool
 }
 
 func New(sourcePackageName string) *Implementator {
@@ -23,11 +24,11 @@ func New(sourcePackageName string) *Implementator {
 }
 
 func (i *Implementator) Name() string {
-	return "filter-return"
+	return "filter-param"
 }
 
 func (i *Implementator) Description() string {
-	return "Filter collection that is returned using list of given functions"
+	return "Filter collection that is passed by function parameters using list of given functions"
 }
 
 func (i *Implementator) Error() error {
@@ -46,10 +47,16 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("expected exactly one method")
 			}
 			methodDef := interfaceNode.Methods.List[0]
+			if code.IsContext(methodDef.Type.(*ast.FuncType).Params.List[0].Type) {
+				i.addContext = true
+				methodDef.Type.(*ast.FuncType).Params.List = methodDef.Type.(*ast.FuncType).Params.List[1:]
+			}
+
 			validate(methodDef)
+			params := code.AddPackageNameToFieldList(methodDef.Type.(*ast.FuncType).Params, i.packageName)
 
 			filterFuncsSignature := text.ToExpr(fstr.Sprintf(map[string]any{
-				"params": getBaseType(methodDef.Type.(*ast.FuncType).Results.List[0].Type),
+				"params": getBaseType(params.List[0].Type),
 			},
 				"[]func({{params}}) bool",
 			))
@@ -62,7 +69,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				},
 			))
 			decls = append(decls, i.newWraperFunction(filterFuncsSignature))
-			decls = append(decls, i.implementFunction(methodDef))
+			// decls = append(decls, i.implementFunction(methodDef))
 
 		default:
 			panic("not an interface")
@@ -92,6 +99,7 @@ func (i *Implementator) newWraperFunction(filtersSigature ast.Expr) ast.Decl {
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
+	params := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Params, i.packageName)
 
 	resultVars := naming.ExtractFuncReturns(field)
 
@@ -105,12 +113,9 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	}
 
 	t := fstr.Sprintf(map[string]any{
-		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
-		"fnName":      field.Names[0].Name,
-		"args": code.AddPackageNameToFieldList(
-			field.Type.(*ast.FuncType).Params,
-			i.packageName,
-		),
+		"firstLetter":      unicode.ToLower(rune(i.interfaceName[0])),
+		"fnName":           field.Names[0].Name,
+		"params":           params,
 		"results":          results,
 		"varArgs":          naming.ExtractFuncArgs(field),
 		"resultType":       field.Type.(*ast.FuncType).Results.List[0].Type,
@@ -139,14 +144,14 @@ OUTER:
 }
 
 func validate(field *ast.Field) {
-	returns := field.Type.(*ast.FuncType).Results
-	if returns == nil || len(returns.List) == 0 {
-		panic("Expected some returns")
+	params := field.Type.(*ast.FuncType).Params
+	if params == nil || len(params.List) == 0 {
+		panic("Expected some params")
 	}
 
-	enumerable := returns.List[0].Type
+	enumerable := params.List[0].Type
 	if !code.IsEnumerable(enumerable) {
-		panic("Expected enumerable as first return")
+		panic("Expected enumerable as parameter")
 	}
 }
 

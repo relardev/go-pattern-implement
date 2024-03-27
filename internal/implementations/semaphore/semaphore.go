@@ -83,7 +83,7 @@ func (i *Implementator) newWraperFunction() ast.Decl {
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	takesContext := code.IsContext(field.Type.(*ast.FuncType).Params.List[0].Type)
 
-	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
+	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
 
 	commonArgs := map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),

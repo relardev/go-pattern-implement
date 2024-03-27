@@ -130,7 +130,7 @@ func ({{firstLetter}} *Throttle) resetCounter() {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	results := code.AddPackageNameToResults(field.Type.(*ast.FuncType).Results, i.packageName)
+	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
 
 	zeroReturns := i.getThrottledReturn(results)
 
