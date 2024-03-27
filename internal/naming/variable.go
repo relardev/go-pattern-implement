@@ -4,8 +4,65 @@ import (
 	"fmt"
 	"go/ast"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
+
+func ExtractFuncArgs(field *ast.Field) []ast.Expr {
+	callArgs := []ast.Expr{}
+	usedNames := map[string]int{}
+	for _, param := range field.Type.(*ast.FuncType).Params.List {
+		var name string
+		switch n := param.Type.(type) {
+		case *ast.Ident:
+			name = "arg"
+		case *ast.StarExpr:
+			name = "arg"
+		case *ast.SelectorExpr:
+			name = VariableNameFromExpr(n)
+		case *ast.ArrayType:
+			name = "arg"
+		case *ast.MapType:
+			name = "arg"
+		case *ast.FuncType:
+			name = "fn"
+		default:
+			name = "arg"
+		}
+
+		if _, ok := usedNames[name]; ok {
+			usedNames[name]++
+			name = fmt.Sprintf("%s%d", name, usedNames[name])
+		} else {
+			usedNames[name] = 1
+		}
+
+		if len(param.Names) == 0 {
+			param.Names = []*ast.Ident{ast.NewIdent(name)}
+			callArgs = append(callArgs, ast.NewIdent(name))
+		} else {
+			for _, name := range param.Names {
+				callArgs = append(callArgs, ast.NewIdent(name.Name))
+			}
+		}
+	}
+
+	return callArgs
+}
+
+func ExtractFuncReturns(field *ast.Field) []ast.Expr {
+	returns := []ast.Expr{}
+	results := field.Type.(*ast.FuncType).Results
+	if results == nil {
+		return returns
+	}
+
+	for _, result := range results.List {
+		returns = append(returns, ast.NewIdent(VariableNameFromExpr(result.Type)))
+	}
+
+	return returns
+}
 
 func VariableNameFromExpr(t ast.Expr) string {
 	switch r := t.(type) {
@@ -14,7 +71,19 @@ func VariableNameFromExpr(t ast.Expr) string {
 	case *ast.SelectorExpr:
 		return nameFromSelector(r)
 	case *ast.Ident:
-		return LowercaseFirstLetter(r.Name)
+		if unicode.IsUpper(rune(r.Name[0])) {
+			return LowercaseFirstLetter(r.Name)
+		}
+		switch r.Name {
+		case "error":
+			return "err"
+		case "string":
+			return "str"
+		case "int":
+			return "i"
+		default:
+			panic(fmt.Sprintf("Unhandled ident in VariableNameFromExpr: %s", r.Name))
+		}
 	case *ast.ArrayType:
 		name := VariableNameFromExpr(r.Elt)
 		if !strings.HasSuffix(name, "s") {
@@ -26,7 +95,6 @@ func VariableNameFromExpr(t ast.Expr) string {
 		if !strings.HasSuffix(name, "s") {
 			name += "s"
 		}
-
 		return name
 	default:
 		panic(fmt.Sprintf("Unknown type in VariableNameFromExpr: %T", r))
