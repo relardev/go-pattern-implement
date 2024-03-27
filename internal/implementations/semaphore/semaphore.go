@@ -3,6 +3,7 @@ package semaphore
 import (
 	"component-generator/internal/code"
 	"component-generator/internal/fstr"
+	"component-generator/internal/naming"
 	"component-generator/internal/text"
 	"fmt"
 	"go/ast"
@@ -88,7 +89,7 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":      field.Names[0].Name,
 		"args":        field.Type.(*ast.FuncType).Params,
-		"varArgs":     code.ExtractFuncArgs(field),
+		"varArgs":     naming.ExtractFuncArgs(field),
 		"results":     results,
 	}
 

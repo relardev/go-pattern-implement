@@ -1,13 +1,12 @@
 package slog
 
 import (
+	"component-generator/internal/code"
+	"component-generator/internal/naming"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
-
-	"component-generator/internal/code"
-	"component-generator/internal/naming"
 )
 
 type slogFunc string
@@ -110,7 +109,7 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		Results: &ast.FieldList{},
 	}
 
-	callArgs := code.ExtractFuncArgs(field)
+	callArgs := naming.ExtractFuncArgs(field)
 
 	if field.Type != nil {
 		switch n := field.Type.(type) {

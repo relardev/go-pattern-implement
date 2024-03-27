@@ -1,7 +1,6 @@
 package code
 
 import (
-	"component-generator/internal/naming"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -81,48 +80,6 @@ func IsContext(expr ast.Expr) bool {
 	default:
 		return false
 	}
-}
-
-func ExtractFuncArgs(field *ast.Field) []ast.Expr {
-	callArgs := []ast.Expr{}
-	usedNames := map[string]int{}
-	for _, param := range field.Type.(*ast.FuncType).Params.List {
-		var name string
-		switch n := param.Type.(type) {
-		case *ast.Ident:
-			name = "arg"
-		case *ast.StarExpr:
-			name = "arg"
-		case *ast.SelectorExpr:
-			name = naming.VariableNameFromExpr(n)
-		case *ast.ArrayType:
-			name = "arg"
-		case *ast.MapType:
-			name = "arg"
-		case *ast.FuncType:
-			name = "fn"
-		default:
-			name = "arg"
-		}
-
-		if _, ok := usedNames[name]; ok {
-			usedNames[name]++
-			name = fmt.Sprintf("%s%d", name, usedNames[name])
-		} else {
-			usedNames[name] = 1
-		}
-
-		if len(param.Names) == 0 {
-			param.Names = []*ast.Ident{ast.NewIdent(name)}
-			callArgs = append(callArgs, ast.NewIdent(name))
-		} else {
-			for _, name := range param.Names {
-				callArgs = append(callArgs, ast.NewIdent(name.Name))
-			}
-		}
-	}
-
-	return callArgs
 }
 
 func AddPackageNameToResults(results *ast.FieldList, packageName string) *ast.FieldList {
@@ -247,4 +204,15 @@ func RemoveNames(fl *ast.FieldList) *ast.FieldList {
 		}
 	}
 	return flCopy
+}
+
+func IsEnumerable(expr ast.Expr) bool {
+	switch t := expr.(type) {
+	case *ast.ArrayType, *ast.MapType:
+		return true
+	case *ast.StarExpr:
+		return IsEnumerable(t.X)
+	default:
+		return false
+	}
 }

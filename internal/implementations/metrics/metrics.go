@@ -119,7 +119,7 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		Results: &ast.FieldList{},
 	}
 
-	callArgs := code.ExtractFuncArgs(
+	callArgs := naming.ExtractFuncArgs(
 		field,
 	)
 

@@ -3,6 +3,7 @@ package generator
 import (
 	"component-generator/internal/implementations/cache"
 	"component-generator/internal/implementations/filter"
+	filterreturns "component-generator/internal/implementations/filter_return"
 	"component-generator/internal/implementations/metrics"
 	"component-generator/internal/implementations/semaphore"
 	"component-generator/internal/implementations/slog"
@@ -171,6 +172,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		throttle.New(packageName, throttle.ModeWithError),
 		filter.New(packageName, filter.ModeWithError),
 		filter.New(packageName, filter.ModeNoError),
+		filterreturns.New(packageName),
 	}
 }
 

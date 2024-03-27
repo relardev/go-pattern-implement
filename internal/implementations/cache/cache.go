@@ -101,7 +101,7 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		"varType":     result,
 		"varName":     naming.VariableNameFromExpr(result.Type),
 		"zeroValue":   code.ZeroValue(result.Type),
-		"varArgs":     code.ExtractFuncArgs(field),
+		"varArgs":     naming.ExtractFuncArgs(field),
 	}, `
 func ({{firstLetter}} *Cache) {{fnName}}({{args}}) ({{varType}}, error) {
 	key := "TODO"
