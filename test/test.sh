@@ -1,13 +1,34 @@
 #!/bin/bash
 
-tests="prometheus cache semaphore throttle-error throttle filter filter-error"
+tests='
+prometheus
+cache
+semaphore
+throttle-error
+throttle
+filter 
+filter-error 
+filter-return:filter-return-list
+filter-return:filter-return-map
+'
 
-for test_name in $tests; do
-    echo "Testing: $test_name"
-    cat test/$test_name/input | ./bin/go-component-generator implement --package abc $test_name > test/$test_name/result
+for test in $tests; do
+    echo $test | grep ":" > /dev/null
+    if [ $? -eq 0 ]; then
+        implementation=$(echo $test | cut -d ":" -f 1)
+        test_dir=$(echo $test | cut -d ":" -f 2)
+    else
+        implementation=$test
+        test_dir=$test
+    fi
+    echo "Testing implementation: $implementation, with test: $test_dir" 
 
-    result="test/$test_name/result"
-    expected="test/$test_name/expected"
+    rm -f test/$test_dir/result
+
+    cat test/$test_dir/input | ./bin/go-component-generator implement --package abc $implementation > test/$test_dir/result
+
+    result="test/$test_dir/result"
+    expected="test/$test_dir/expected"
 
     diff_output=$(diff "$result" "$expected")
 
