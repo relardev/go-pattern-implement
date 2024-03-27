@@ -3,8 +3,8 @@ package generator
 import (
 	"component-generator/internal/implementations/cache"
 	"component-generator/internal/implementations/filter"
-	filterarg "component-generator/internal/implementations/filter_arg"
 	filterreturn "component-generator/internal/implementations/filter_return"
+	"component-generator/internal/implementations/filterparam"
 	"component-generator/internal/implementations/metrics"
 	"component-generator/internal/implementations/semaphore"
 	"component-generator/internal/implementations/slog"
@@ -174,7 +174,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		filter.New(packageName, filter.ModeWithError),
 		filter.New(packageName, filter.ModeNoError),
 		filterreturn.New(packageName),
-		filterarg.New(packageName),
+		filterparam.New(packageName),
 	}
 }
 

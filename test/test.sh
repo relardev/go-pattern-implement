@@ -10,6 +10,7 @@ filter
 filter-error 
 filter-return:filter-return-list
 filter-return:filter-return-map
+filter-param
 '
 
 for test in $tests; do

@@ -21,9 +21,9 @@ func ExtractFuncArgs(field *ast.Field) []ast.Expr {
 		case *ast.SelectorExpr:
 			name = VariableNameFromExpr(n)
 		case *ast.ArrayType:
-			name = "arg"
+			name = VariableNameFromExpr(n)
 		case *ast.MapType:
-			name = "arg"
+			name = VariableNameFromExpr(n)
 		case *ast.FuncType:
 			name = "fn"
 		default:

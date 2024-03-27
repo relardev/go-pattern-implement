@@ -1,0 +1,21 @@
+type Filter struct {
+	b	abc.Batch
+	filters	[]func(abc.Message) bool
+}
+
+func New(b abc.Batch, filters []func(abc.Message) bool) *Filter {
+	return &Filter{b: b, filters: filters}
+}
+func (b *Filter) Process(ctx context.Context, messages []abc.Message, arg string) {
+	filtered := []abc.Message{}
+OUTER:
+	for _, item := range messages {
+		for _, filter := range b.filters {
+			if !filter(item) {
+				continue OUTER
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	b.b.Process(ctx, filtered, arg)
+}

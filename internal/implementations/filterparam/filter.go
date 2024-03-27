@@ -1,4 +1,4 @@
-package filterarg
+package filterparam
 
 import (
 	"component-generator/internal/code"
@@ -69,7 +69,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				},
 			))
 			decls = append(decls, i.newWraperFunction(filterFuncsSignature))
-			// decls = append(decls, i.implementFunction(methodDef))
+			decls = append(decls, i.implementFunction(methodDef))
 
 		default:
 			panic("not an interface")
@@ -98,38 +98,56 @@ func (i *Implementator) newWraperFunction(filtersSigature ast.Expr) ast.Decl {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
-	params := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Params, i.packageName)
+	params := field.Type.(*ast.FuncType).Params
 
-	resultVars := naming.ExtractFuncReturns(field)
+	paramType := params.List[0].Type
+	addToFiltered := appendOrSet(paramType, "filtered", "item")
+	rangeDestruct := rangeDestructure(paramType, "item")
 
-	finalReturns := make([]ast.Expr, len(resultVars))
-	for i, r := range resultVars {
+	paramVars := naming.ExtractFuncArgs(field)
+
+	finalParams := make([]ast.Expr, len(paramVars))
+	for i, r := range paramVars {
 		if i == 0 {
-			finalReturns[i] = ast.NewIdent("filtered")
+			finalParams[i] = ast.NewIdent("filtered")
 			continue
 		}
-		finalReturns[i] = r
+		finalParams[i] = r
+	}
+
+	if i.addContext {
+		params.List = append(
+			[]*ast.Field{
+				{Names: []*ast.Ident{ast.NewIdent("ctx")}, Type: ast.NewIdent("context.Context")},
+			},
+			params.List...,
+		)
+		finalParams = append([]ast.Expr{ast.NewIdent("ctx")}, finalParams...)
+	}
+
+	results := field.Type.(*ast.FuncType).Results
+
+	var returnText string
+	if results != nil && len(results.List) != 0 {
+		returnText = "return"
 	}
 
 	t := fstr.Sprintf(map[string]any{
 		"firstLetter":      unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":           field.Names[0].Name,
 		"params":           params,
-		"results":          results,
-		"varArgs":          naming.ExtractFuncArgs(field),
-		"resultType":       field.Type.(*ast.FuncType).Results.List[0].Type,
-		"resultVars":       resultVars,
-		"resultVar":        resultVars[0],
-		"addToFilterered":  appendOrSet(results.List[0].Type, "filtered", "item"),
-		"rangeDestructure": rangeDestructure(results.List[0].Type, "item"),
-		"return":           finalReturns,
+		"results":          field.Type.(*ast.FuncType).Results,
+		"varArgs":          finalParams,
+		"paramsType":       paramType,
+		"paramVar":         paramVars[0],
+		"addToFilterered":  addToFiltered,
+		"rangeDestructure": rangeDestruct,
+		"return":           returnText,
 	}, `
-func ({{firstLetter}} *Filter) {{fnName}}({{args}}) ({{results}}) {
-	{{resultVars}} := {{firstLetter}}.{{firstLetter}}.{{fnName}}({{varArgs}})
-	filtered := {{resultType}}{}
+func ({{firstLetter}} *Filter) {{fnName}}({{params}}) ({{results}}) {
+	filtered := {{paramsType}}{}
 OUTER:
-	for {{rangeDestructure}} := range {{resultVar}} {
+	for {{rangeDestructure}} := range {{paramVar}} {
 		for _, filter := range {{firstLetter}}.filters {
 			if !filter(item) {
 			 	continue OUTER
@@ -137,7 +155,7 @@ OUTER:
 		}
 		{{addToFilterered}}
 	}
-	return {{return}}
+	{{return}} {{firstLetter}}.{{firstLetter}}.{{fnName}}({{varArgs}})
 }`)
 
 	return text.ToDecl(t)
