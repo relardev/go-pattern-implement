@@ -134,6 +134,8 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		}
 	}
 
+	typeDef.Results = code.AddPackageNameToFieldList(typeDef.Results, i.packageName)
+
 	returns, returningError := processReturns(typeDef)
 
 	callWrapped := &ast.CallExpr{

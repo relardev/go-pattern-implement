@@ -1,9 +1,9 @@
 # Component Generator
 
-This tool generates implementation for given input code(interface, function definition, etc.), for example when you want to implement caching wrapper for given interface you can pass your interface to `go-component-generator` and get implementation.
+This tool generates implementation for given code(interface, function definition, etc.), for example when you want to implement caching wrapper for given interface you can pass your interface to `go-component-generator` and get implementation.
 
 ```
-> cat inputs/user_repo
+> cat inputs/cache
 
 type Repo interface {
 	Get(context.Context, string) (User, error)
@@ -11,7 +11,7 @@ type Repo interface {
 ```
 
 ```
-> cat inputs/user_repo | go-component-generator implement cache --package user
+> cat inputs/cache | go-component-generator implement cache --package user
 
 type Cache struct {
         r       user.Repo
@@ -22,7 +22,7 @@ func New(r user.Repo, expiration, cleanupInterval time.Duration) *Cache {
         return &Cache{r: r, cache: cache.New(expiration, cleanupInterval)}
 }
 func (r *Cache) Get(ctx context.Context, arg string) (user.User, error) {
-        key := "TODO"
+        key := arg
         cachedItem, found := r.cache.Get(key)
         if found {
                 user, ok := cachedItem.(user.User)
