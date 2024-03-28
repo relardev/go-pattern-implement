@@ -19,9 +19,9 @@ Ideas:
 - [x] Slog
 - [ ] Log
 - [x] Filter
-    - whole call
-    - return
-    - arg
+    - Whole call
+    - Result
+    - Param
 - [ ] Goroutine Channel Hinge
 - [ ] Batching
 - [x] Throttle
