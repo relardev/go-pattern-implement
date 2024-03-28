@@ -82,16 +82,16 @@ func IsContext(expr ast.Expr) bool {
 	}
 }
 
-func AddPackageNameToResults(results *ast.FieldList, packageName string) *ast.FieldList {
-	if results == nil {
+func AddPackageNameToFieldList(fl *ast.FieldList, packageName string) *ast.FieldList {
+	if fl == nil {
 		return nil
 	}
 
-	for _, r := range results.List {
+	for _, r := range fl.List {
 		r.Type = PossiblyAddPackageName(packageName, r.Type)
 	}
 
-	return results
+	return fl
 }
 
 func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {

@@ -1,4 +1,4 @@
-package filterreturn
+package filterparam
 
 import (
 	"component-generator/internal/code"
@@ -14,6 +14,7 @@ type Implementator struct {
 	err           error
 	packageName   string
 	interfaceName string
+	addContext    bool
 }
 
 func New(sourcePackageName string) *Implementator {
@@ -23,11 +24,11 @@ func New(sourcePackageName string) *Implementator {
 }
 
 func (i *Implementator) Name() string {
-	return "filter-return"
+	return "filter-param"
 }
 
 func (i *Implementator) Description() string {
-	return "Filter collection that is returned using list of given functions"
+	return "Filter collection that is passed by function parameters using list of given functions"
 }
 
 func (i *Implementator) Error() error {
@@ -46,10 +47,16 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				panic("expected exactly one method")
 			}
 			methodDef := interfaceNode.Methods.List[0]
+			if code.IsContext(methodDef.Type.(*ast.FuncType).Params.List[0].Type) {
+				i.addContext = true
+				methodDef.Type.(*ast.FuncType).Params.List = methodDef.Type.(*ast.FuncType).Params.List[1:]
+			}
+
 			validate(methodDef)
+			params := code.AddPackageNameToFieldList(methodDef.Type.(*ast.FuncType).Params, i.packageName)
 
 			filterFuncsSignature := text.ToExpr(fstr.Sprintf(map[string]any{
-				"params": getBaseType(methodDef.Type.(*ast.FuncType).Results.List[0].Type),
+				"params": getBaseType(params.List[0].Type),
 			},
 				"[]func({{params}}) bool",
 			))
@@ -91,40 +98,56 @@ func (i *Implementator) newWraperFunction(filtersSigature ast.Expr) ast.Decl {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
+	params := field.Type.(*ast.FuncType).Params
 
-	resultVars := naming.ExtractFuncReturns(field)
+	paramType := params.List[0].Type
+	addToFiltered := appendOrSet(paramType, "filtered", "item")
+	rangeDestruct := rangeDestructure(paramType, "item")
 
-	finalReturns := make([]ast.Expr, len(resultVars))
-	for i, r := range resultVars {
+	paramVars := naming.ExtractFuncArgs(field)
+
+	finalParams := make([]ast.Expr, len(paramVars))
+	for i, r := range paramVars {
 		if i == 0 {
-			finalReturns[i] = ast.NewIdent("filtered")
+			finalParams[i] = ast.NewIdent("filtered")
 			continue
 		}
-		finalReturns[i] = r
+		finalParams[i] = r
+	}
+
+	if i.addContext {
+		params.List = append(
+			[]*ast.Field{
+				{Names: []*ast.Ident{ast.NewIdent("ctx")}, Type: ast.NewIdent("context.Context")},
+			},
+			params.List...,
+		)
+		finalParams = append([]ast.Expr{ast.NewIdent("ctx")}, finalParams...)
+	}
+
+	results := field.Type.(*ast.FuncType).Results
+
+	var returnText string
+	if results != nil && len(results.List) != 0 {
+		returnText = "return"
 	}
 
 	t := fstr.Sprintf(map[string]any{
-		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
-		"fnName":      field.Names[0].Name,
-		"args": code.AddPackageNameToFieldList(
-			field.Type.(*ast.FuncType).Params,
-			i.packageName,
-		),
-		"results":          results,
-		"varArgs":          naming.ExtractFuncArgs(field),
-		"resultType":       field.Type.(*ast.FuncType).Results.List[0].Type,
-		"resultVars":       resultVars,
-		"resultVar":        resultVars[0],
-		"addToFilterered":  appendOrSet(results.List[0].Type, "filtered", "item"),
-		"rangeDestructure": rangeDestructure(results.List[0].Type, "item"),
-		"return":           finalReturns,
+		"firstLetter":      unicode.ToLower(rune(i.interfaceName[0])),
+		"fnName":           field.Names[0].Name,
+		"params":           params,
+		"results":          field.Type.(*ast.FuncType).Results,
+		"varArgs":          finalParams,
+		"paramsType":       paramType,
+		"paramVar":         paramVars[0],
+		"addToFilterered":  addToFiltered,
+		"rangeDestructure": rangeDestruct,
+		"return":           returnText,
 	}, `
-func ({{firstLetter}} *Filter) {{fnName}}({{args}}) ({{results}}) {
-	{{resultVars}} := {{firstLetter}}.{{firstLetter}}.{{fnName}}({{varArgs}})
-	filtered := {{resultType}}{}
+func ({{firstLetter}} *Filter) {{fnName}}({{params}}) ({{results}}) {
+	filtered := {{paramsType}}{}
 OUTER:
-	for {{rangeDestructure}} := range {{resultVar}} {
+	for {{rangeDestructure}} := range {{paramVar}} {
 		for _, filter := range {{firstLetter}}.filters {
 			if !filter(item) {
 			 	continue OUTER
@@ -132,21 +155,21 @@ OUTER:
 		}
 		{{addToFilterered}}
 	}
-	return {{return}}
+	{{return}} {{firstLetter}}.{{firstLetter}}.{{fnName}}({{varArgs}})
 }`)
 
 	return text.ToDecl(t)
 }
 
 func validate(field *ast.Field) {
-	returns := field.Type.(*ast.FuncType).Results
-	if returns == nil || len(returns.List) == 0 {
-		panic("Expected some returns")
+	params := field.Type.(*ast.FuncType).Params
+	if params == nil || len(params.List) == 0 {
+		panic("Expected some params")
 	}
 
-	enumerable := returns.List[0].Type
+	enumerable := params.List[0].Type
 	if !code.IsEnumerable(enumerable) {
-		panic("Expected enumerable as first return")
+		panic("Expected enumerable as parameter")
 	}
 }
 
