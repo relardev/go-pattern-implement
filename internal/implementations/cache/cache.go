@@ -102,9 +102,10 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 		"varName":     naming.VariableNameFromExpr(result.Type),
 		"zeroValue":   code.ZeroValue(result.Type),
 		"varArgs":     naming.ExtractFuncArgs(field),
+		"key":         generateKey(field.Type.(*ast.FuncType).Params),
 	}, `
 func ({{firstLetter}} *Cache) {{fnName}}({{args}}) ({{varType}}, error) {
-	key := "TODO"
+	key := {{key}}
 	cachedItem, found := {{firstLetter}}.cache.Get(key)
 	if found {
 		{{varName}}, ok := cachedItem.({{varType}})
@@ -124,4 +125,29 @@ func ({{firstLetter}} *Cache) {{fnName}}({{args}}) ({{varType}}, error) {
 }`)
 
 	return text.ToDecl(t)
+}
+
+func generateKey(params *ast.FieldList) string {
+	key := "\"TODO\""
+	withoutContext := []*ast.Field{}
+	if code.IsContext(params.List[0].Type) {
+		for i := 1; i < len(params.List); i++ {
+			withoutContext = append(withoutContext, params.List[i])
+		}
+	} else {
+		withoutContext = params.List
+	}
+
+	if len(withoutContext) == 1 && len(withoutContext[0].Names) == 1 {
+		nodeType := withoutContext[0].Type
+		switch t := nodeType.(type) {
+		case *ast.Ident:
+			if t.Name == "string" {
+				return withoutContext[0].Names[0].Name
+			}
+		default:
+			return key
+		}
+	}
+	return key
 }
