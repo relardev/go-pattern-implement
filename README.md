@@ -55,7 +55,7 @@ List all implementations
 go-component-generator list
 ```
 
-List only available components for given input
+List only available implementations for given input
 
 ```
 cat inputs/prometheus | go-component-generator list --available
