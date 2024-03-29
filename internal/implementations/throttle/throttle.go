@@ -119,10 +119,10 @@ func (i *Implementator) resetCounterFunction() ast.Decl {
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 	}, `
 func ({{firstLetter}} *Throttle) resetCounter() {
-	for range p.ticker.C {
-		p.mu.Lock()
-		p.alreadyCalled = false
-		p.mu.Unlock()
+	for range {{firstLetter}}.ticker.C {
+		{{firstLetter}}.mu.Lock()
+		{{firstLetter}}.alreadyCalled = false
+		{{firstLetter}}.mu.Unlock()
 	}
 }
 `)

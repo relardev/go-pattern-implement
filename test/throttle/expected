@@ -11,10 +11,10 @@ func New(r abc.Repo, passesPerSecond int) *Throttle {
 	return throttle
 }
 func (r *Throttle) resetCounter() {
-	for range p.ticker.C {
-		p.mu.Lock()
-		p.alreadyCalled = false
-		p.mu.Unlock()
+	for range r.ticker.C {
+		r.mu.Lock()
+		r.alreadyCalled = false
+		r.mu.Unlock()
 	}
 }
 func (r *Throttle) Set(arg string, arg2 int) error {
