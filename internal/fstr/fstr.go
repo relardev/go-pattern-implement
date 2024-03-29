@@ -1,10 +1,11 @@
 package fstr
 
 import (
-	"component-generator/internal/code"
 	"fmt"
 	"go/ast"
 	"strings"
+
+	"github.com/relardev/go-pattern-implement/internal/code"
 )
 
 type tokenType int

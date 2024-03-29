@@ -1,6 +1,6 @@
-# Component Generator
+# Pattern Implement
 
-This tool generates implementation for given code(interface, function definition, etc.), for example when you want to implement caching wrapper for given interface you can pass your interface to `go-component-generator` and get implementation.
+This tool generates implementation for given code(interface, function definition, etc.), for example when you want to implement caching wrapper for given interface you can pass your interface to `go-pattern-implement` and get implementation.
 
 ```
 > cat inputs/cache
@@ -11,7 +11,7 @@ type Repo interface {
 ```
 
 ```
-> cat inputs/cache | go-component-generator implement cache --package user
+> cat inputs/cache | go-pattern-implement implement cache --package user
 
 type Cache struct {
         r       user.Repo
@@ -44,7 +44,7 @@ func (r *Cache) Get(ctx context.Context, arg string) (user.User, error) {
 ## Install
 
 ```
-go install github.com/relardev/go-component-generator
+go install github.com/relardev/go-pattern-implement@latest
 ```
 
 ## Usage
@@ -52,23 +52,23 @@ go install github.com/relardev/go-component-generator
 List all implementations
 
 ```
-go-component-generator list
+go-pattern-implement list
 ```
 
 List only available implementations for given input
 
 ```
-cat inputs/prometheus | go-component-generator list --available
+cat inputs/prometheus | go-pattern-implement list --available
 ```
 
 
-Implement a component
+Implement a pattern
 
 ```
-cat inputs/prometheus | go-component-generator implement prometheus --package asdf
+cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
 ```
 
-## Components
+## Patterns
 
 - [x] Metrics
     -  Prometheus

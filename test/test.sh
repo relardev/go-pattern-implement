@@ -26,7 +26,7 @@ for test in $tests; do
 
     rm -f test/$test_dir/result
 
-    cat test/$test_dir/input | ./bin/go-component-generator implement --package abc $implementation > test/$test_dir/result
+    cat test/$test_dir/input | ./bin/go-pattern-implement implement --package abc $implementation > test/$test_dir/result
 
     result="test/$test_dir/result"
     expected="test/$test_dir/expected"

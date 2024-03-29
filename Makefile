@@ -1,5 +1,5 @@
 build:
-	go build -o bin/go-component-generator
+	go build -o bin/go-pattern-implement
 
 .PHONY: test
 test: build

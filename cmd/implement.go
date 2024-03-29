@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"component-generator/internal/generator"
+	"github.com/relardev/go-pattern-implement/internal/generator"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +19,7 @@ var implementCmd = &cobra.Command{
 and generate the implementation on stdout
 
 	to find out available implementations, run:
-	$ component-generator list
+	$ pattern-implement list
 	`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

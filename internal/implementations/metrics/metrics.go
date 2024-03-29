@@ -1,13 +1,14 @@
 package metrics
 
 import (
-	"component-generator/internal/code"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
 
-	naming "component-generator/internal/naming"
+	"github.com/relardev/go-pattern-implement/internal/code"
+
+	naming "github.com/relardev/go-pattern-implement/internal/naming"
 )
 
 type Implementator struct {

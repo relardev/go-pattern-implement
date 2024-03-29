@@ -1,11 +1,12 @@
 package filegetter
 
 import (
-	"component-generator/internal/code"
-	"component-generator/internal/naming"
 	"errors"
 	"go/ast"
 	"go/token"
+
+	"github.com/relardev/go-pattern-implement/internal/code"
+	"github.com/relardev/go-pattern-implement/internal/naming"
 )
 
 type Implementator struct {

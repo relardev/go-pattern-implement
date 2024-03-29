@@ -1,15 +1,6 @@
 package generator
 
 import (
-	"component-generator/internal/implementations/cache"
-	"component-generator/internal/implementations/filter"
-	filterreturn "component-generator/internal/implementations/filter_return"
-	"component-generator/internal/implementations/filterparam"
-	"component-generator/internal/implementations/metrics"
-	"component-generator/internal/implementations/semaphore"
-	"component-generator/internal/implementations/slog"
-	"component-generator/internal/implementations/store"
-	"component-generator/internal/implementations/throttle"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -19,7 +10,17 @@ import (
 	"os"
 	"strings"
 
-	filegetter "component-generator/internal/implementations/file_getter"
+	"github.com/relardev/go-pattern-implement/internal/implementations/cache"
+	"github.com/relardev/go-pattern-implement/internal/implementations/filter"
+	filterreturn "github.com/relardev/go-pattern-implement/internal/implementations/filter_return"
+	"github.com/relardev/go-pattern-implement/internal/implementations/filterparam"
+	"github.com/relardev/go-pattern-implement/internal/implementations/metrics"
+	"github.com/relardev/go-pattern-implement/internal/implementations/semaphore"
+	"github.com/relardev/go-pattern-implement/internal/implementations/slog"
+	"github.com/relardev/go-pattern-implement/internal/implementations/store"
+	"github.com/relardev/go-pattern-implement/internal/implementations/throttle"
+
+	filegetter "github.com/relardev/go-pattern-implement/internal/implementations/file_getter"
 )
 
 type template string

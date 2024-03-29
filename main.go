@@ -1,8 +1,6 @@
 package main
 
-import (
-	"component-generator/cmd"
-)
+import "github.com/relardev/go-pattern-implement/cmd"
 
 func main() {
 	cmd.Execute()

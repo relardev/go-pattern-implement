@@ -1,12 +1,13 @@
 package slog
 
 import (
-	"component-generator/internal/code"
-	"component-generator/internal/naming"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"unicode"
+
+	"github.com/relardev/go-pattern-implement/internal/code"
+	"github.com/relardev/go-pattern-implement/internal/naming"
 )
 
 type slogFunc string

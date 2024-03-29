@@ -7,9 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "component-generator",
-	Short: "CLI utility to generate implementations of components",
-	Long: `CLI utility to generate implementations of components.
+	Use:   "pattern-implement",
+	Short: "CLI utility to generate implementations of patterns",
+	Long: `CLI utility to generate implementations of patterns.
 Main idea is to generate the initial implementation, paste it 
 into the project and then if needed, modify it.`,
 }

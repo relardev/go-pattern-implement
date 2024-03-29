@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"component-generator/internal/generator"
+	"github.com/relardev/go-pattern-implement/internal/generator"
 
 	"github.com/spf13/cobra"
 )

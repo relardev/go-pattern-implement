@@ -4,8 +4,8 @@ import (
 	"go/ast"
 	"go/token"
 
-	"component-generator/internal/code"
-	"component-generator/internal/naming"
+	"github.com/relardev/go-pattern-implement/internal/code"
+	"github.com/relardev/go-pattern-implement/internal/naming"
 )
 
 type NewBehaviour bool

@@ -1,4 +1,4 @@
-module component-generator
+module github.com/relardev/go-pattern-implement
 
 go 1.21.3
 

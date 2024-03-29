@@ -8,4 +8,4 @@ fi
 test_name=$1
 implementation_name=$2
 
-cat test/$test_name/input | ./bin/go-component-generator implement --package abc $implementation_name > test/$test_name/expected
+cat test/$test_name/input | ./bin/go-pattern-implement implement --package abc $implementation_name > test/$test_name/expected

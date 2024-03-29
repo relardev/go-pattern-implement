@@ -1,13 +1,14 @@
 package semaphore
 
 import (
-	"component-generator/internal/code"
-	"component-generator/internal/fstr"
-	"component-generator/internal/naming"
-	"component-generator/internal/text"
 	"fmt"
 	"go/ast"
 	"unicode"
+
+	"github.com/relardev/go-pattern-implement/internal/code"
+	"github.com/relardev/go-pattern-implement/internal/fstr"
+	"github.com/relardev/go-pattern-implement/internal/naming"
+	"github.com/relardev/go-pattern-implement/internal/text"
 )
 
 type Implementator struct {
