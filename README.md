@@ -47,6 +47,10 @@ func (r *Cache) Get(ctx context.Context, arg string) (user.User, error) {
 go install github.com/relardev/go-pattern-implement@latest
 ```
 
+## Integration
+
+1. NeoVim - [link](https://github.com/relardev/go-pattern-implement.nvim)
+
 ## Usage
 
 List all implementations
