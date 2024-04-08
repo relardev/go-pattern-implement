@@ -19,6 +19,7 @@ import (
 	"github.com/relardev/go-pattern-implement/internal/implementations/slog"
 	"github.com/relardev/go-pattern-implement/internal/implementations/store"
 	"github.com/relardev/go-pattern-implement/internal/implementations/throttle"
+	"github.com/relardev/go-pattern-implement/internal/implementations/tracing"
 
 	filegetter "github.com/relardev/go-pattern-implement/internal/implementations/file_getter"
 )
@@ -176,6 +177,7 @@ func (g *Generator) implementators(packageName string) []implementator {
 		filter.New(packageName, filter.ModeNoError),
 		filterreturn.New(packageName),
 		filterparam.New(packageName),
+		tracing.New(packageName),
 	}
 }
 

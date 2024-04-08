@@ -1,0 +1,23 @@
+type Attributes interface {
+	GetConfig(ctx context.Context, userID, partnerID string) (dto.AttributesConfig, error)
+	SetConfig(ctx context.Context, userID, partnerID string, cfgDto dto.AttributesConfig) error
+	DeleteConfig(ctx context.Context, userID, partnerID string) error
+	List(
+		ctx context.Context,
+		userID,
+		partnerID string,
+		requestedCfg *dto.AttributesConfig,
+	) (dto.AttributesList, error)
+	Update(ctx context.Context, attribute dto.AttributeUpdateParams) (dto.Attribute, error)
+	Delete(
+		ctx context.Context,
+		partnerID string,
+		attrID string,
+	) error
+	Create(
+		ctx context.Context,
+		partnerID string,
+		attribute *dto.Attribute,
+	) (dto.Attribute, error)
+}
+

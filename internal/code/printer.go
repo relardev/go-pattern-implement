@@ -39,12 +39,7 @@ func printFuncType(fl *ast.FieldList) string {
 	}
 
 	for _, p := range fl.List {
-		var typeNameBuf bytes.Buffer
-		for _, n := range p.Names {
-			typeNameBuf.WriteString(n.Name + " ")
-		}
-		typeNameBuf.WriteString(exprString(p.Type))
-		params = append(params, typeNameBuf.String())
+		params = append(params, printField(p))
 	}
 
 	return join(params, ", ")
