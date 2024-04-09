@@ -92,18 +92,19 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 	varArgs[0] = ast.NewIdent("spanCtx")
 
 	template := fstr.Sprintf(map[string]any{
-		"fnName":     field.Names[0].Name,
-		"args":       field.Type.(*ast.FuncType).Params,
-		"results":    results,
-		"varArgs":    varArgs,
-		"resultVars": naming.ExtractFuncReturns(field),
-		"traceName":  fmt.Sprintf("%s.%s", interfaceName, field.Names[0].Name),
+		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
+		"fnName":      field.Names[0].Name,
+		"args":        field.Type.(*ast.FuncType).Params,
+		"results":     results,
+		"varArgs":     varArgs,
+		"resultVars":  naming.ExtractFuncReturns(field),
+		"traceName":   fmt.Sprintf("%s.%s", interfaceName, field.Names[0].Name),
 	}, `
 func (t *Tracer) {{fnName}}({{args}}) ({{results}}) {
-	spanCtx, span := w.tracer.Start(ctx, "{{traceName}}")
+	spanCtx, span := t.tracer.Start(ctx, "{{traceName}}")
 	defer span.End()
 
-	{{resultVars}} := {{traceName}}({{varArgs}})
+	{{resultVars}} := t.{{firstLetter}}.{{fnName}}({{varArgs}})
 
 	if err != nil {
 		span.SetStatus(
@@ -115,7 +116,7 @@ func (t *Tracer) {{fnName}}({{args}}) ({{results}}) {
 		return {{resultVars}}
 	}
 
-	span.AddEvent(fmt.Sprintf("{{traceName}} succeded"))
+	span.AddEvent("{{traceName}} succeded"))
 
 	return {{resultVars}}
 }
