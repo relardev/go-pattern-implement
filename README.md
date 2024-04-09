@@ -98,6 +98,7 @@ cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
     -  Error
     -  No error
 - [ ] Retry
+- [ ] Renew (for example token)
 
 ## TODOs
 
