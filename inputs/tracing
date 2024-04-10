@@ -15,9 +15,9 @@ type Attributes interface {
 		attrID string,
 	) error
 	Create(
-		ctx context.Context,
-		partnerID string,
-		attribute *dto.Attribute,
-	) (dto.Attribute, error)
+		context.Context,
+		string,
+		*dto.CDPAttribute,
+	) (dto.CDPAttribute, error)
 }
 

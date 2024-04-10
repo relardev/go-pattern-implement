@@ -43,10 +43,10 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 		i.interfaceName = typeSpec.Name.Name
 		decls = append(decls,
 			code.Struct(
-				"Tracer",
+				i.interfaceName+"Tracer",
 				code.FieldFromTypeSpec(typeSpec, i.packageName),
 				code.StructField{
-					Name:    "tracer",
+					Name:    "t",
 					TypeStr: "trace.Tracer",
 				},
 			))
@@ -73,8 +73,8 @@ func (i *Implementator) newWrapperFunction() ast.Decl {
 		"interfaceSelector": fmt.Sprintf("%s.%s", i.packageName, i.interfaceName),
 		"pkgName":           i.packageName,
 	}, `
-	func New({{firstLetter}} {{interfaceSelector}}) *Tracer {
-		return &Tracer{
+	func New{{interfaceName}}({{firstLetter}} {{interfaceSelector}}) *{{interfaceName}}Tracer {
+		return &{{interfaceName}}Tracer{
 			{{firstLetter}}: {{firstLetter}},
 			tracer:      otel.Tracer("{{pkgName}}.{{interfaceName}}"),
 		}
@@ -92,15 +92,16 @@ func (i *Implementator) implementFunction(interfaceName string, field *ast.Field
 	varArgs[0] = ast.NewIdent("spanCtx")
 
 	template := fstr.Sprintf(map[string]any{
-		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
-		"fnName":      field.Names[0].Name,
-		"args":        field.Type.(*ast.FuncType).Params,
-		"results":     results,
-		"varArgs":     varArgs,
-		"resultVars":  naming.ExtractFuncReturns(field),
-		"traceName":   fmt.Sprintf("%s.%s", interfaceName, field.Names[0].Name),
+		"interfaceName": i.interfaceName,
+		"firstLetter":   unicode.ToLower(rune(i.interfaceName[0])),
+		"fnName":        field.Names[0].Name,
+		"args":          field.Type.(*ast.FuncType).Params,
+		"results":       results,
+		"varArgs":       varArgs,
+		"resultVars":    naming.ExtractFuncReturns(field),
+		"traceName":     fmt.Sprintf("%s.%s", interfaceName, field.Names[0].Name),
 	}, `
-func (t *Tracer) {{fnName}}({{args}}) ({{results}}) {
+func (t *{{interfaceName}}Tracer) {{fnName}}({{args}}) ({{results}}) {
 	spanCtx, span := t.tracer.Start(ctx, "{{traceName}}")
 	defer span.End()
 
@@ -116,7 +117,7 @@ func (t *Tracer) {{fnName}}({{args}}) ({{results}}) {
 		return {{resultVars}}
 	}
 
-	span.AddEvent("{{traceName}} succeded"))
+	span.AddEvent("{{traceName}} succeded")
 
 	return {{resultVars}}
 }

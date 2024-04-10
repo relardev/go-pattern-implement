@@ -72,7 +72,7 @@ func VariableNameFromExpr(t ast.Expr) string {
 		return nameFromSelector(r)
 	case *ast.Ident:
 		if unicode.IsUpper(rune(r.Name[0])) {
-			return LowercaseFirstLetter(r.Name)
+			return VarNameFromType(r.Name)
 		}
 		switch r.Name {
 		case "error":
@@ -111,6 +111,22 @@ func LowercaseFirstLetter(s string) string {
 	r, size := utf8.DecodeRuneInString(s)
 	// Lowercase the first rune and concatenate with the rest of the string
 	return strings.ToLower(string(r)) + s[size:]
+}
+
+func VarNameFromType(s string) string {
+	return LowercaseFirstLetter(s)
+	// TODO lowercase everything untill upper followed by lower found
+	// to handle case like CDPAttribute
+	// if len(s) == 1 {
+	// 	return LowercaseFirstLetter(s)
+	// }
+	// result := ""
+	// for i, c := range s {
+	// 	if s[i+1] > len(s) {
+	// 		break
+	// 	}
+	// 	if s[i+1]
+	// }
 }
 
 func nameFromSelector(sel *ast.SelectorExpr) string {
