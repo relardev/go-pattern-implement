@@ -92,7 +92,10 @@ func (i *Implementator) newWraperFunction(filtersSigature ast.Expr) ast.Decl {
 }
 
 func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
-	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
+	results := code.AddPackageNameToFieldListAndRemoveNames(
+		field.Type.(*ast.FuncType).Results,
+		i.packageName,
+	)
 
 	resultVars := naming.ExtractFuncReturns(field)
 
@@ -108,7 +111,7 @@ func (i *Implementator) implementFunction(field *ast.Field) ast.Decl {
 	t := fstr.Sprintf(map[string]any{
 		"firstLetter": unicode.ToLower(rune(i.interfaceName[0])),
 		"fnName":      field.Names[0].Name,
-		"args": code.AddPackageNameToFieldList(
+		"args": code.AddPackageNameToFieldListAndRemoveNames(
 			field.Type.(*ast.FuncType).Params,
 			i.packageName,
 		),

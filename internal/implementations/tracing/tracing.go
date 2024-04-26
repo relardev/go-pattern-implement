@@ -85,7 +85,10 @@ func (i *Implementator) newWrapperFunction() ast.Decl {
 
 func (i *Implementator) implementFunction(interfaceName string, field *ast.Field) ast.Decl {
 	i.validate(field)
-	results := code.AddPackageNameToFieldList(field.Type.(*ast.FuncType).Results, i.packageName)
+	results := code.AddPackageNameToFieldListAndRemoveNames(
+		field.Type.(*ast.FuncType).Results,
+		i.packageName,
+	)
 
 	varArgs := naming.ExtractFuncArgs(field)
 

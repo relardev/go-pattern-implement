@@ -54,7 +54,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 			}
 
 			validate(methodDef)
-			params := code.AddPackageNameToFieldList(methodDef.Type.(*ast.FuncType).Params, i.packageName)
+			params := code.AddPackageNameToFieldListAndRemoveNames(methodDef.Type.(*ast.FuncType).Params, i.packageName)
 
 			filterFuncsSignature := text.ToExpr(fstr.Sprintf(map[string]any{
 				"params": getBaseType(params.List[0].Type),

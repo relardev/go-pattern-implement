@@ -82,7 +82,7 @@ func IsContext(expr ast.Expr) bool {
 	}
 }
 
-func AddPackageNameToFieldList(fl *ast.FieldList, packageName string) *ast.FieldList {
+func AddPackageNameToFieldListAndRemoveNames(fl *ast.FieldList, packageName string) *ast.FieldList {
 	if fl == nil {
 		return nil
 	}
