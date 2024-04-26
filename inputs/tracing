@@ -1,23 +1,27 @@
-type Attributes interface {
-	GetConfig(ctx context.Context, userID, partnerID string) (dto.AttributesConfig, error)
-	SetConfig(ctx context.Context, userID, partnerID string, cfgDto dto.AttributesConfig) error
-	DeleteConfig(ctx context.Context, userID, partnerID string) error
-	List(
+type DigitalProfile interface {
+	Create(ctx context.Context, email, partnerID string) (model.DigitalProfile, error)
+	ListWithCount(
 		ctx context.Context,
-		userID,
-		partnerID string,
-		requestedCfg *dto.AttributesConfig,
-	) (dto.AttributesList, error)
-	Update(ctx context.Context, attribute dto.AttributeUpdateParams) (dto.Attribute, error)
-	Delete(
+		cfg model.ClientsConfig,
+		pageNo,
+		pageSize int,
+		createdBefore, createdAfter optional.Optional[time.Time],
+		lastSeenBefore, lastSeenAfter optional.Optional[time.Time],
+		query,
+		segmentID,
+		fqlQuery,
+		clientType optional.Optional[string],
+	) (dps []model.DigitalProfile, count uint64, err error)
+	Delete(ctx context.Context, userID, partnerID string) ([]dto.Dependency, bool, error)
+	Get(
 		ctx context.Context,
-		partnerID string,
-		attrID string,
+		partnerID, clientID string,
+		attrs []string,
+	) (model.DigitalProfile, error)
+	UpdateAttribute(
+		ctx context.Context,
+		partnerID, userID, attrID, valType, attrType string,
+		value interface{},
 	) error
-	Create(
-		context.Context,
-		string,
-		*dto.CDPAttribute,
-	) (dto.CDPAttribute, error)
 }
 

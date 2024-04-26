@@ -103,3 +103,4 @@ cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
 ## TODOs
 
 - [ ] Auto run tests on commits
+- [ ] named returns in trace(styx-segments)

@@ -85,6 +85,10 @@ func exprString(e ast.Expr) string {
 		return fmt.Sprintf("%s(%s)", exprString(x.Fun), printExprs(x.Args))
 	case *ast.BasicLit:
 		return x.Value
+	case *ast.IndexExpr:
+		return fmt.Sprintf("%s[%s]", exprString(x.X), exprString(x.Index))
+	case *ast.InterfaceType:
+		return "interface{}"
 	default:
 		// this might blow up? before it was the return below but not sure
 		// if it was important

@@ -83,6 +83,8 @@ func VariableNameFromExpr(t ast.Expr) string {
 			return "i"
 		case "bool":
 			return "b"
+		case "uint64":
+			return "u64"
 		default:
 			panic(fmt.Sprintf("Unhandled ident in VariableNameFromExpr: %s", r.Name))
 		}

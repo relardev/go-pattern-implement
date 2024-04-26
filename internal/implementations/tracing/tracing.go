@@ -46,7 +46,7 @@ func (i *Implementator) Visit(node ast.Node) (bool, []ast.Decl) {
 				i.interfaceName+"Tracer",
 				code.FieldFromTypeSpec(typeSpec, i.packageName),
 				code.StructField{
-					Name:    "t",
+					Name:    "tracer",
 					TypeStr: "trace.Tracer",
 				},
 			))

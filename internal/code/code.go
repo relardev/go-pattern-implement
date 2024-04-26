@@ -91,6 +91,13 @@ func AddPackageNameToFieldList(fl *ast.FieldList, packageName string) *ast.Field
 		r.Type = PossiblyAddPackageName(packageName, r.Type)
 	}
 
+	for _, r := range fl.List {
+		if r == nil {
+			continue
+		}
+		r.Names = nil
+	}
+
 	return fl
 }
 
