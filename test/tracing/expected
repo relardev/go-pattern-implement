@@ -1,0 +1,44 @@
+type ClientTracer struct {
+	c	abc.Client
+	tracer	trace.Tracer
+}
+
+func NewClient(c abc.Client) *ClientTracer {
+	return &ClientTracer{c: c, tracer: otel.Tracer("abc.Client")}
+}
+func (t *ClientTracer) GetSegments(ctx context.Context, partnerID, userID string) ([]string, error) {
+	spanCtx, span := t.tracer.Start(ctx, "Client.GetSegments")
+	defer span.End()
+	strs, err := t.c.GetSegments(spanCtx, partnerID, userID)
+	if err != nil {
+		span.SetStatus(codes.Error, "Client.GetSegments failed")
+		span.RecordError(err)
+		return strs, err
+	}
+	span.AddEvent("Client.GetSegments succeded")
+	return strs, err
+}
+func (t *ClientTracer) GetAttributes(ctx context.Context, partnerID, userID string, usrGroups []string) (map[string]interface{}, error) {
+	spanCtx, span := t.tracer.Start(ctx, "Client.GetAttributes")
+	defer span.End()
+	things, err := t.c.GetAttributes(spanCtx, partnerID, userID, usrGroups)
+	if err != nil {
+		span.SetStatus(codes.Error, "Client.GetAttributes failed")
+		span.RecordError(err)
+		return things, err
+	}
+	span.AddEvent("Client.GetAttributes succeded")
+	return things, err
+}
+func (t *ClientTracer) UpdateAttribute(ctx context.Context, partnerID, clientID, attrID string, value interface{}) error {
+	spanCtx, span := t.tracer.Start(ctx, "Client.UpdateAttribute")
+	defer span.End()
+	err := t.c.UpdateAttribute(spanCtx, partnerID, clientID, attrID, value)
+	if err != nil {
+		span.SetStatus(codes.Error, "Client.UpdateAttribute failed")
+		span.RecordError(err)
+		return err
+	}
+	span.AddEvent("Client.UpdateAttribute succeded")
+	return err
+}

@@ -11,6 +11,7 @@ filter-error
 filter-return:filter-return-list
 filter-return:filter-return-map
 filter-param
+tracing
 '
 
 for test in $tests; do

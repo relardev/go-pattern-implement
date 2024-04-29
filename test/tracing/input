@@ -1,0 +1,12 @@
+type Client interface {
+	GetSegments(ctx context.Context, partnerID, userID string) ([]string, error)
+	GetAttributes(
+		ctx context.Context, partnerID, userID string, usrGroups []string,
+	) (map[string]interface{}, error)
+	UpdateAttribute(
+		ctx context.Context,
+		partnerID, clientID, attrID string,
+		value interface{},
+	) error
+}
+
