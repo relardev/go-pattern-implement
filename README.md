@@ -77,7 +77,7 @@ cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
 - [x] Metrics
     -  Prometheus
     -  StatsD
-- [ ] Tracing
+- [x] Tracing
 - [x] Cache
 - [x] Store
 - [ ] Semaphore
@@ -92,7 +92,7 @@ cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
     - Whole call
     - Result
     - Param
-- [ ] Goroutine Channel Hinge
+- [ ] Paralellisation
 - [ ] Batching
 - [x] Throttle
     -  Error
@@ -103,4 +103,3 @@ cat inputs/prometheus | go-pattern-implement implement prometheus --package asdf
 ## TODOs
 
 - [ ] Auto run tests on commits
-- [ ] named returns in trace(styx-segments)
