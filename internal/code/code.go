@@ -131,6 +131,9 @@ func PossiblyAddPackageName(packageName string, expr ast.Expr) ast.Expr {
 			Key:   PossiblyAddPackageName(packageName, t.Key),
 			Value: PossiblyAddPackageName(packageName, t.Value),
 		}
+
+	case *ast.InterfaceType:
+		newExpr = t
 	default:
 		panic(fmt.Sprintf("unsupported type in PossiblyAddPackageName: %T", t))
 	}

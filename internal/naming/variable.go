@@ -100,6 +100,9 @@ func VariableNameFromExpr(t ast.Expr) string {
 			name += "s"
 		}
 		return name
+
+	case *ast.InterfaceType:
+		return "thing"
 	default:
 		panic(fmt.Sprintf("Unknown type in VariableNameFromExpr: %T", r))
 	}

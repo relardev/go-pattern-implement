@@ -1,26 +1,11 @@
-type DigitalProfile interface {
-	Create(ctx context.Context, email, partnerID string) (model.DigitalProfile, error)
-	ListWithCount(
-		ctx context.Context,
-		cfg model.ClientsConfig,
-		pageNo,
-		pageSize int,
-		createdBefore, createdAfter optional.Optional[time.Time],
-		lastSeenBefore, lastSeenAfter optional.Optional[time.Time],
-		query,
-		segmentID,
-		fqlQuery,
-		clientType optional.Optional[string],
-	) (dps []model.DigitalProfile, count uint64, err error)
-	Delete(ctx context.Context, userID, partnerID string) ([]dto.Dependency, bool, error)
-	Get(
-		ctx context.Context,
-		partnerID, clientID string,
-		attrs []string,
-	) (model.DigitalProfile, error)
+type Client interface {
+	GetSegments(ctx context.Context, partnerID, userID string) ([]string, error)
+	GetAttributes(
+		cts context.Context, partnerID, userID string, usrGroups []string,
+	) (map[string]interface{}, error)
 	UpdateAttribute(
 		ctx context.Context,
-		partnerID, userID, attrID, valType, attrType string,
+		partnerID, clientID, attrID string,
 		value interface{},
 	) error
 }
