@@ -1,6 +1,14 @@
-type Stdout interface {
-	Process(input string) error
-  Add(var1 int, var2 int)
-  Save(msg domain.Message) error
-  Get(int, int) error
+type TimestampClient interface {
+	BatchUserUpdateHashes(
+		ctx context.Context,
+		acids []string,
+		mcs []model.MasterConditionsIf,
+		hashes []string,
+	) error
+	BatchUserSetTimestamps(
+		ctx context.Context,
+		acids []string,
+		hashes []string,
+		timestamps [][]int64,
+	) error
 }
