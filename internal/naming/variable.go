@@ -79,7 +79,7 @@ func VariableNameFromExpr(t ast.Expr) string {
 			return "err"
 		case "string":
 			return "str"
-		case "int":
+		case "int", "int64":
 			return "i"
 		case "bool":
 			return "b"
